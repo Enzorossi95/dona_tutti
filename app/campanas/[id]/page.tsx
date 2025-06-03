@@ -1,0 +1,437 @@
+"use client"
+
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Heart, Share2, Calendar, MapPin, DollarSign, Users, MessageCircle, Camera, FileText, Eye } from "lucide-react"
+import Image from "next/image"
+import { useState } from "react"
+import Link from "next/link"
+import { useParams } from "next/navigation"
+import { getCampaignById, getCampaignUpdates, getCampaignComments } from "@/lib/data/campaigns"
+import { getReceiptsByCampaign, getTotalSpentByCampaign } from "@/lib/data/receipts"
+import { formatCurrency, formatPercentage } from "@/lib/utils/formatters"
+import EmptyState from "@/components/shared/EmptyState"
+
+export default function CampaignPage() {
+  const params = useParams()
+  const campaignId = params.id as string
+  
+  const [selectedUpdate, setSelectedUpdate] = useState<any>(null)
+
+  // Obtener datos dinámicos basados en el ID
+  const campaign = getCampaignById(campaignId)
+  const updates = getCampaignUpdates(campaignId)
+  const receipts = getReceiptsByCampaign(campaignId)
+  const totalSpent = getTotalSpentByCampaign(campaignId)
+
+  // Manejar caso de campaña no encontrada
+  if (!campaign) {
+    return <EmptyState title="Campaña no encontrada" description="La campaña que buscas no existe o ha sido eliminada." />
+  }
+
+  const progressPercentage = formatPercentage(campaign.raised, campaign.goal)
+
+  const getUpdateIcon = (type: string) => {
+    switch (type) {
+      case "medical":
+        return <FileText className="h-4 w-4" />
+      case "expense":
+        return <DollarSign className="h-4 w-4" />
+      default:
+        return <Camera className="h-4 w-4" />
+    }
+  }
+
+  const getUpdateBadgeColor = (type: string) => {
+    switch (type) {
+      case "medical":
+        return "bg-blue-100 text-blue-800"
+      case "expense":
+        return "bg-green-100 text-green-800"
+      default:
+        return "bg-purple-100 text-purple-800"
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Columna Principal */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Información Principal */}
+            <Card>
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <Badge variant="secondary" className="bg-red-100 text-red-800">
+                    Urgente
+                  </Badge>
+                  <Button variant="ghost" size="sm">
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Compartir
+                  </Button>
+                </div>
+
+                <h1 className="text-3xl font-bold text-gray-900 mb-4">{campaign.title}</h1>
+
+                {/* Galería de Imágenes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div className="md:col-span-2">
+                    <Image
+                      src={campaign.images?.[0] || campaign.image || "/placeholder.svg"}
+                      alt={campaign.animal?.name || "Animal"}
+                      width={600}
+                      height={400}
+                      className="w-full h-64 md:h-80 object-cover rounded-lg"
+                    />
+                  </div>
+                  <Image
+                    src={campaign.images?.[1] || campaign.image || "/placeholder.svg"}
+                    alt={campaign.animal?.name || "Animal"}
+                    width={300}
+                    height={200}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                  <Image
+                    src={campaign.images?.[2] || campaign.image || "/placeholder.svg"}
+                    alt={campaign.animal?.name || "Animal"}
+                    width={300}
+                    height={200}
+                    className="w-full h-32 object-cover rounded-lg"
+                  />
+                </div>
+
+                {/* Información del Animal */}
+                {campaign.animal && (
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                    <h3 className="font-semibold text-lg mb-2">Sobre el Beneficiario</h3>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-500">Nombre:</span>
+                        <p className="font-medium">{campaign.animal.name}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Categoría:</span>
+                        <p className="font-medium">{campaign.animal.type}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Edad:</span>
+                        <p className="font-medium">{campaign.animal.age}</p>
+                      </div>
+                      <div>
+                        <span className="text-gray-500">Situación:</span>
+                        <p className="font-medium">Rescatada de la calle</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Descripción */}
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Historia del Caso</h3>
+                  <p className="text-gray-700 leading-relaxed">{campaign.description}</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Feed de Actualizaciones */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MessageCircle className="h-5 w-5 mr-2" />
+                  Actualizaciones de la Campaña
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {updates.map((update) => (
+                  <div key={update.id} className="border-l-4 border-blue-200 pl-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center space-x-2">
+                        <Badge className={getUpdateBadgeColor(update.type)}>
+                          {getUpdateIcon(update.type)}
+                          <span className="ml-1 capitalize">{update.type}</span>
+                        </Badge>
+                        <span className="text-sm text-gray-500">
+                          {update.date} - {update.time}
+                        </span>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSelectedUpdate(update)}
+                        className="text-blue-600 hover:text-blue-800"
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        Ver detalle
+                      </Button>
+                    </div>
+                    <h4
+                      className="font-semibold mb-2 cursor-pointer hover:text-blue-600"
+                      onClick={() => setSelectedUpdate(update)}
+                    >
+                      {update.title}
+                    </h4>
+                    <p className="text-gray-700 mb-3">{update.content}</p>
+                    {update.images && (
+                      <div className="flex space-x-2 mb-2">
+                        {update.images.slice(0, 2).map((img, idx) => (
+                          <Image
+                            key={idx}
+                            src={img || "/placeholder.svg"}
+                            alt="Actualización"
+                            width={150}
+                            height={100}
+                            className="w-24 h-16 object-cover rounded cursor-pointer hover:opacity-80"
+                            onClick={() => setSelectedUpdate(update)}
+                          />
+                        ))}
+                        {update.images.length > 2 && (
+                          <div
+                            className="w-24 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
+                            onClick={() => setSelectedUpdate(update)}
+                          >
+                            <span className="text-sm text-gray-600">+{update.images.length - 2}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <p className="text-sm text-gray-500">Por: {update.author}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Sección de Comentarios */}
+            {/* Sección de Comentarios - Próximamente */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <span>Mensajes de Apoyo</span>
+                  <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                    Próximamente
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-center py-8">
+                  <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Mensajes de Apoyo</h3>
+                  <p className="text-gray-500 mb-4">
+                    Pronto podrás dejar mensajes de apoyo y leer los comentarios de otros donantes.
+                  </p>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600">🚧 Esta funcionalidad está en desarrollo</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar de Donación */}
+          <div className="space-y-6">
+            {/* Card de Donación - Solo este será sticky */}
+            <Card>
+              <CardContent className="p-6">
+                {/* Progreso de Donación */}
+                <div className="mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-2xl font-bold text-green-600">{formatCurrency(campaign.raised)}</span>
+                    <span className="text-sm text-gray-500">de {formatCurrency(campaign.goal)}</span>
+                  </div>
+                  <Progress value={progressPercentage} className="h-3 mb-2" />
+                  <p className="text-sm text-gray-600">{progressPercentage}% del objetivo alcanzado</p>
+                </div>
+
+                {/* Estadísticas */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <Users className="h-4 w-4 text-blue-500 mr-1" />
+                      <span className="font-bold text-lg">{campaign.donors}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Donantes</p>
+                  </div>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center mb-1">
+                      <Calendar className="h-4 w-4 text-orange-500 mr-1" />
+                      <span className="font-bold text-lg">{campaign.daysLeft}</span>
+                    </div>
+                    <p className="text-xs text-gray-500">Días restantes</p>
+                  </div>
+                </div>
+
+                {/* Botón de Donación */}
+                <Button className="w-full bg-green-600 hover:bg-green-700 text-white mb-4" size="lg">
+                  <Heart className="h-4 w-4 mr-2" />
+                  Donar Ahora
+                </Button>
+
+                {/* Información del Organizador */}
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Organizado por</h4>
+                  <div className="flex items-center space-x-3">
+                    <Avatar>
+                      <AvatarImage src={campaign.organizer.avatar || "/placeholder.svg"} />
+                      <AvatarFallback>FP</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-1">
+                        <span className="font-medium text-sm">{campaign.organizer.name}</span>
+                        {campaign.organizer.verified && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                            Verificado
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500 mt-1">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {campaign.location}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Métodos de Pago */}
+                <div className="border-t pt-4 mt-4">
+                  <h4 className="font-semibold mb-3 text-sm">Métodos de pago seguros</h4>
+                  <div className="flex items-center space-x-2">
+                    <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">MercadoPago</div>
+                    <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Tarjetas</div>
+                    <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Transferencia</div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Transparencia - No sticky para que sea visible */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Transparencia</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {receipts.slice(0, 3).map((receipt) => (
+                    <div key={receipt.id} className="flex justify-between text-sm">
+                      <span>{receipt.type}</span>
+                      <span className="font-medium">{formatCurrency(receipt.amount)}</span>
+                    </div>
+                  ))}
+                  <div className="border-t pt-2 flex justify-between font-medium">
+                    <span>Total gastado</span>
+                    <span>{formatCurrency(totalSpent)}</span>
+                  </div>
+                  <Link href={`/campanas/${campaign.id}/comprobantes`}>
+                    <Button variant="outline" size="sm" className="w-full">
+                      Ver Comprobantes ({receipts.length})
+                    </Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        {/* Modal de Detalle de Actualización */}
+        {selectedUpdate && (
+          <Dialog open={!!selectedUpdate} onOpenChange={() => setSelectedUpdate(null)}>
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+              <DialogHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Badge className={getUpdateBadgeColor(selectedUpdate.type)}>
+                      {getUpdateIcon(selectedUpdate.type)}
+                      <span className="ml-1 capitalize">{selectedUpdate.type}</span>
+                    </Badge>
+                    <span className="text-sm text-gray-500">
+                      {selectedUpdate.date} - {selectedUpdate.time}
+                    </span>
+                  </div>
+                </div>
+                <DialogTitle className="text-xl">{selectedUpdate.title}</DialogTitle>
+              </DialogHeader>
+
+              <div className="space-y-6">
+                {/* Contenido completo */}
+                <div>
+                  <p className="text-gray-700 leading-relaxed">{selectedUpdate.fullContent}</p>
+                </div>
+
+                {/* Imágenes */}
+                {selectedUpdate.images && selectedUpdate.images.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Imágenes</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {selectedUpdate.images.map((img: string, idx: number) => (
+                        <Image
+                          key={idx}
+                          src={img || "/placeholder.svg"}
+                          alt={`Imagen ${idx + 1}`}
+                          width={400}
+                          height={300}
+                          className="w-full h-48 object-cover rounded-lg"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Desglose de gastos (solo para tipo expense) */}
+                {selectedUpdate.type === "expense" && selectedUpdate.expense && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Desglose de Gastos</h4>
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <div className="space-y-2">
+                        {selectedUpdate.expense.breakdown.map((item: any, idx: number) => (
+                          <div key={idx} className="flex justify-between text-sm">
+                            <span>{item.item}</span>
+                            <span className="font-medium">${item.amount.toLocaleString()}</span>
+                          </div>
+                        ))}
+                        <div className="border-t pt-2 flex justify-between font-semibold">
+                          <span>Total</span>
+                          <span>${selectedUpdate.expense.total.toLocaleString()}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Documentos */}
+                {selectedUpdate.documents && selectedUpdate.documents.length > 0 && (
+                  <div>
+                    <h4 className="font-semibold mb-3">Documentos</h4>
+                    <div className="space-y-2">
+                      {selectedUpdate.documents.map((doc: string, idx: number) => (
+                        <div key={idx} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
+                          <FileText className="h-4 w-4 text-gray-500" />
+                          <span className="text-sm text-blue-600 hover:underline cursor-pointer">{doc}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Información adicional */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between text-sm text-gray-500">
+                    <span>Publicado por: {selectedUpdate.author}</span>
+                    {selectedUpdate.location && (
+                      <div className="flex items-center">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {selectedUpdate.location}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
+        )}
+      </main>
+    </div>
+  )
+}
