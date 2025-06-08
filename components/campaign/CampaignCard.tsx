@@ -130,7 +130,7 @@ export function CampaignCard({ campaign }: CampaignCardProps) {
         </Link>
         <Link href={`/campanas/${campaign.id}/donar`} className="flex-1">
           <Button 
-            className={`w-full ${isUrgent ? 'bg-red-600 hover:bg-red-700' : 'bg-green-600 hover:bg-green-700'}`}
+            className={`w-full bg-green-600 hover:bg-green-700`}
             disabled={isCompleted}
           >
             <Heart className="h-4 w-4 mr-2" />

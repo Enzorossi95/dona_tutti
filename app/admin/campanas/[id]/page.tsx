@@ -84,16 +84,16 @@ export default function AdminCampaignDetailPage() {
 
         <div className="flex items-center space-x-2">
           <Link href={`/campanas/${campaign.id}`}>
-            <Button variant="outline" size="sm">
+            <Button variant="orange" size="sm">
               <ExternalLink className="h-4 w-4 mr-2" />
               Ver Público
             </Button>
           </Link>
-          <Button variant="outline" size="sm">
+          <Button variant="orange" size="sm">
             <Edit className="h-4 w-4 mr-2" />
             Editar
           </Button>
-          <Button variant="outline" size="sm">
+          <Button variant="orange" size="sm">
             <Share2 className="h-4 w-4 mr-2" />
             Compartir
           </Button>

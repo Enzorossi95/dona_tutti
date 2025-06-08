@@ -12,20 +12,26 @@ import { ArrowLeft, Upload, X, Plus, MapPin, DollarSign, Camera, Save, Eye } fro
 import Image from "next/image"
 import { useState } from "react"
 import Link from "next/link"
+import { CreateCampaignForm } from "@/types/createCampaingform"
 
 export default function CreateCampaignPage() {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateCampaignForm>({
     title: "",
-    beneficiaryName: "",
-    beneficiaryAge: "",
     description: "",
-    currentSituation: "",
-    requiredHelp: "",
-    urgencyReason: "",
     goal: "",
     location: "",
     urgency: "medium",
     category: "medical",
+    beneficiaryName: "",
+    beneficiaryAge: "",
+    requiredHelp: "",
+    urgencyReason: "",
+    currentSituation: "",
+    contactName: "",
+    contactPhone: "",
+    contactEmail: "",
+    contactWebsite: "",
+    paymentMethods: [],
   })
 
   const [images, setImages] = useState<string[]>([])
@@ -33,7 +39,18 @@ export default function CreateCampaignPage() {
   const totalSteps = 4
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }))
+    setFormData((estadoActual: CreateCampaignForm) => ({ ...estadoActual, [field]: value }))
+  }
+
+  const handleArrayChange = (field: string, value: string, checked: boolean) => {
+    setFormData((estadoActual: CreateCampaignForm) => {
+      const currentArray = estadoActual[field as keyof CreateCampaignForm] as string[]
+      if (checked) {
+        return { ...estadoActual, [field]: [...currentArray, value] }
+      } else {
+        return { ...estadoActual, [field]: currentArray.filter((item: string) => item !== value) }
+      }
+    })
   }
 
   const addImage = () => {
@@ -55,7 +72,13 @@ export default function CreateCampaignPage() {
 
   const progressPercentage = (currentStep / totalSteps) * 100
 
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    console.log(formData)
+  }
+
   return (
+    <form onSubmit={handleSubmit}>
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -98,7 +121,7 @@ export default function CreateCampaignPage() {
               {currentStep === 1 && (
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="title">Título de la Campaña *</Label>
+                    <Label htmlFor="title" className="text-sm font-medium mb-2">Título de la Campaña *</Label>
                     <Input
                       id="title"
                       placeholder="Ej: Ayuda a Luna - Cirugía de Emergencia"
@@ -108,7 +131,7 @@ export default function CreateCampaignPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="description">Descripción de la Historia *</Label>
+                    <Label htmlFor="description" className="text-sm font-medium mb-2">Descripción de la Historia *</Label>
                     <Textarea
                       id="description"
                       placeholder="Cuenta la historia del animal, qué le pasó, qué necesita..."
@@ -120,7 +143,7 @@ export default function CreateCampaignPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="goal">Objetivo de Recaudación (ARS) *</Label>
+                      <Label htmlFor="goal" className="text-sm font-medium mb-2">Objetivo de Recaudación (ARS) *</Label>
                       <Input
                         id="goal"
                         type="number"
@@ -130,7 +153,7 @@ export default function CreateCampaignPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="location">Ubicación *</Label>
+                      <Label htmlFor="location" className="text-sm font-medium mb-2">Ubicación *</Label>
                       <Input
                         id="location"
                         placeholder="Buenos Aires, Argentina"
@@ -142,9 +165,9 @@ export default function CreateCampaignPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="urgency">Nivel de Urgencia</Label>
+                      <Label htmlFor="urgency" className="text-sm font-medium mb-2">Nivel de Urgencia</Label>
                       <Select value={formData.urgency} onValueChange={(value) => handleInputChange("urgency", value)}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -156,9 +179,9 @@ export default function CreateCampaignPage() {
                       </Select>
                     </div>
                     <div>
-                      <Label htmlFor="category">Categoría</Label>
+                      <Label htmlFor="category" className="text-sm font-medium mb-2">Categoría</Label>
                       <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
-                        <SelectTrigger>
+                        <SelectTrigger className="w-full">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -178,7 +201,7 @@ export default function CreateCampaignPage() {
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <Label htmlFor="beneficiaryName">Nombre del Beneficiario *</Label>
+                      <Label htmlFor="beneficiaryName" className="text-sm font-medium mb-2">Nombre del Beneficiario *</Label>
                       <Input
                         id="beneficiaryName"
                         placeholder="Ej: Luna, Familia García, Comunidad San José"
@@ -187,7 +210,7 @@ export default function CreateCampaignPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="beneficiaryAge">Edad (Opcional)</Label>
+                      <Label htmlFor="beneficiaryAge" className="text-sm font-medium mb-2">Edad (Opcional)</Label>
                       <Input
                         id="beneficiaryAge"
                         placeholder="2 años, 35 años, etc."
@@ -198,7 +221,7 @@ export default function CreateCampaignPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="currentSituation">Situación Actual *</Label>
+                    <Label htmlFor="currentSituation" className="text-sm font-medium mb-2">Situación Actual *</Label>
                     <Textarea
                       id="currentSituation"
                       placeholder="Describe la situación actual del beneficiario, síntomas, condiciones, estado..."
@@ -209,7 +232,7 @@ export default function CreateCampaignPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="requiredHelp">Ayuda Necesaria *</Label>
+                    <Label htmlFor="requiredHelp" className="text-sm font-medium mb-2">Ayuda Necesaria *</Label>
                     <Textarea
                       id="requiredHelp"
                       placeholder="Describe qué tipo de ayuda se necesita: tratamiento médico, reconstrucción, alimentos, medicamentos..."
@@ -220,7 +243,7 @@ export default function CreateCampaignPage() {
                   </div>
 
                   <div>
-                    <Label htmlFor="urgencyReason">Motivo de la Urgencia</Label>
+                    <Label htmlFor="urgencyReason" className="text-sm font-medium mb-2">Motivo de la Urgencia</Label>
                     <Textarea
                       id="urgencyReason"
                       placeholder="Explica por qué es urgente esta donación y qué pasaría si no se recibe ayuda a tiempo..."
@@ -236,7 +259,7 @@ export default function CreateCampaignPage() {
               {currentStep === 3 && (
                 <div className="space-y-4">
                   <div>
-                    <Label>Fotos del Caso *</Label>
+                    <Label className="text-sm font-medium mb-2">Fotos del Caso *</Label>
                     <p className="text-sm text-gray-600 mb-3">
                       Agrega fotos que muestren la situación del animal. La primera imagen será la principal.
                     </p>
@@ -290,32 +313,76 @@ export default function CreateCampaignPage() {
               {currentStep === 4 && (
                 <div className="space-y-4">
                   <div>
-                    <Label>Información de Contacto</Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                      <Input placeholder="Nombre de la organización" />
-                      <Input placeholder="Teléfono de contacto" />
-                      <Input placeholder="Email de contacto" />
-                      <Input placeholder="Sitio web (opcional)" />
+                    <Label className="text-sm font-medium mb-2">Información de Contacto</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label htmlFor="contactName" className="text-sm font-medium mb-2">Nombre de la organización</Label>
+                      <Input
+                        id="contactName"
+                        placeholder="Ej: Fundación Animal"
+                        value={formData.contactName}
+                        onChange={(e) => handleInputChange("contactName", e.target.value)}
+                      />
                     </div>
+                    <div>
+                      <Label htmlFor="contactPhone" className="text-sm font-medium mb-2">Teléfono de contacto</Label>
+                      <Input
+                        id="contactPhone"
+                        placeholder="11-1234-5678"
+                        value={formData.contactPhone}
+                        onChange={(e) => handleInputChange("contactPhone", e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contactEmail" className="text-sm font-medium mb-2">Email de contacto</Label>
+                      <Input 
+                        id="contactEmail" 
+                        placeholder="Email de contacto" 
+                        value={formData.contactEmail} 
+                        onChange={(e) => handleInputChange("contactEmail", e.target.value)} 
+                        type="email"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contactWebsite" className="text-sm font-medium mb-2">Sitio web (opcional)</Label>
+                      <Input
+                        id="contactWebsite"
+                        placeholder="Sitio web (opcional)" 
+                        value={formData.contactWebsite} onChange={(e) => handleInputChange("contactWebsite", e.target.value)} />
+                    </div>
+                  </div>
                   </div>
 
                   <div>
                     <Label>Métodos de Pago</Label>
                     <div className="space-y-2 mt-2">
                       <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="mercadopago" defaultChecked />
+                        <input 
+                          type="checkbox" 
+                          id="mercadopago" 
+                          defaultChecked 
+                          onChange={(e) => handleArrayChange("paymentMethods", "mercadopago", e.target.checked)}
+                        />
                         <label htmlFor="mercadopago" className="text-sm">
                           MercadoPago
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="transfer" />
+                        <input 
+                          type="checkbox" 
+                          id="transfer" 
+                          onChange={(e) => handleArrayChange("paymentMethods", "transfer", e.target.checked)}
+                        />
                         <label htmlFor="transfer" className="text-sm">
                           Transferencia Bancaria
                         </label>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <input type="checkbox" id="cash" />
+                        <input 
+                          type="checkbox" 
+                          id="cash" 
+                          onChange={(e) => handleArrayChange("paymentMethods", "cash", e.target.checked)}
+                        />
                         <label htmlFor="cash" className="text-sm">
                           Efectivo
                         </label>
@@ -350,7 +417,7 @@ export default function CreateCampaignPage() {
                   {currentStep < totalSteps ? (
                     <Button onClick={nextStep}>Siguiente</Button>
                   ) : (
-                    <Button className="bg-green-600 hover:bg-green-700">
+                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
                       <Eye className="h-4 w-4 mr-2" />
                       Publicar Campaña
                     </Button>
@@ -426,5 +493,6 @@ export default function CreateCampaignPage() {
         </div>
       </div>
     </div>
+    </form>
   )
 }

@@ -11,7 +11,7 @@ import Image from "next/image"
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { getCampaignById, getCampaignUpdates, getCampaignComments } from "@/lib/data/campaigns"
+import { getCampaignById, getCampaignUpdates } from "@/lib/data/campaigns"
 import { getReceiptsByCampaign, getTotalSpentByCampaign } from "@/lib/data/receipts"
 import { formatCurrency, formatPercentage } from "@/lib/utils/formatters"
 import EmptyState from "@/components/shared/EmptyState"
@@ -82,27 +82,13 @@ export default function CampaignPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div className="md:col-span-2">
                     <Image
-                      src={campaign.images?.[0] || campaign.image || "/placeholder.svg"}
+                      src={campaign.image || "/placeholder.svg"}
                       alt={campaign.animal?.name || "Animal"}
                       width={600}
                       height={400}
                       className="w-full h-64 md:h-80 object-cover rounded-lg"
                     />
                   </div>
-                  <Image
-                    src={campaign.images?.[1] || campaign.image || "/placeholder.svg"}
-                    alt={campaign.animal?.name || "Animal"}
-                    width={300}
-                    height={200}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
-                  <Image
-                    src={campaign.images?.[2] || campaign.image || "/placeholder.svg"}
-                    alt={campaign.animal?.name || "Animal"}
-                    width={300}
-                    height={200}
-                    className="w-full h-32 object-cover rounded-lg"
-                  />
                 </div>
 
                 {/* Información del Animal */}

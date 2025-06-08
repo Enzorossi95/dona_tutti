@@ -1,0 +1,18 @@
+export interface CreateCampaignForm {
+    title: string,
+    description: string,
+    goal: string,
+    location: string,
+    urgency: "low" | "medium" | "high" | "critical",
+    category: "medical" | "rescue" | "food" | "shelter",
+    beneficiaryName: string,
+    beneficiaryAge: string,
+    requiredHelp: string,
+    urgencyReason: string,
+    currentSituation: string,
+    contactName: string,
+    contactPhone: string,
+    contactEmail: string,
+    contactWebsite: string,
+    paymentMethods: string[],
+  }
