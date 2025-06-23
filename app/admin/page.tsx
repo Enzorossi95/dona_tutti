@@ -22,16 +22,10 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import Image from "next/image"
 import Link from "next/link"
 
+import { useSummary } from "@/hooks/api/useSummary"
+
 export default function AdminDashboard() {
-  // Datos de ejemplo
-  const stats = {
-    totalCampaigns: 3,
-    activeCampaigns: 2,
-    totalRaised: 232500,
-    totalDonors: 226,
-    thisMonthRaised: 89500,
-    thisMonthDonors: 47,
-  }
+  const { summary, isLoading, isError } = useSummary()
 
   const campaigns = [
     {
@@ -131,14 +125,18 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Campañas</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalCampaigns}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isLoading ? "..." : summary?.totalCampaigns || 0}
+                </p>
               </div>
               <div className="h-12 w-12 bg-blue-100 rounded-lg flex items-center justify-center">
                 <Heart className="h-6 w-6 text-blue-600" />
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm text-gray-600">{stats.activeCampaigns} activas</span>
+              <span className="text-sm text-gray-600">
+                {isLoading ? "..." : summary?.activeCampaigns || 0} activas
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -148,14 +146,18 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Recaudado</p>
-                <p className="text-2xl font-bold text-gray-900">${stats.totalRaised.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  ${isLoading ? "..." : (summary?.totalRaised || 0).toLocaleString()}
+                </p>
               </div>
               <div className="h-12 w-12 bg-green-100 rounded-lg flex items-center justify-center">
                 <DollarSign className="h-6 w-6 text-green-600" />
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm text-green-600">+${stats.thisMonthRaised.toLocaleString()} este mes</span>
+              <span className="text-sm text-green-600">
+                +${isLoading ? "..." : (summary?.thisMonthRaised || 0).toLocaleString()} este mes
+              </span>
             </div>
           </CardContent>
         </Card>
@@ -165,14 +167,18 @@ export default function AdminDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Donantes</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalDonors}</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {isLoading ? "..." : summary?.totalDonors || 0}
+                </p>
               </div>
               <div className="h-12 w-12 bg-purple-100 rounded-lg flex items-center justify-center">
                 <Users className="h-6 w-6 text-purple-600" />
               </div>
             </div>
             <div className="mt-4">
-              <span className="text-sm text-purple-600">+{stats.thisMonthDonors} este mes</span>
+              <span className="text-sm text-purple-600">
+                +{isLoading ? "..." : summary?.thisMonthDonors || 0} este mes
+              </span>
             </div>
           </CardContent>
         </Card>
