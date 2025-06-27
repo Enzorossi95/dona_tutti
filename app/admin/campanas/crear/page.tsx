@@ -8,13 +8,16 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Upload, X, Plus, MapPin, DollarSign, Camera, Save, Eye } from "lucide-react"
+import { ArrowLeft, Upload, X, Plus, MapPin, DollarSign, Camera, Save, Eye, User, LogOut } from "lucide-react"
 import Image from "next/image"
 import { useState } from "react"
 import Link from "next/link"
 import { CreateCampaignForm } from "@/types/createCampaingform"
+import { CreateCampaignRoute } from "@/components/auth/ProtectedRoute"
+import { useAuth } from "@/lib/auth/authContext"
 
 export default function CreateCampaignPage() {
+  const { user, logout } = useAuth()
   const [formData, setFormData] = useState<CreateCampaignForm>({
     title: "",
     description: "",
@@ -279,26 +282,42 @@ export default function CreateCampaignPage() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Link href="/admin">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver al Dashboard
+    <CreateCampaignRoute>
+      <form onSubmit={handleSubmit}>
+      <div className="space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <Link href="/admin">
+              <Button variant="ghost" size="sm">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al Dashboard
+              </Button>
+            </Link>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Crear Nueva Campaña</h1>
+              <p className="text-gray-600 mt-1">Completa todos los pasos para publicar tu campaña</p>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {/* User info */}
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <User className="h-4 w-4" />
+              <span>{user?.firstName || user?.username}</span>
+              <Badge variant="outline">{user?.role?.name}</Badge>
+            </div>
+            
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+              Paso {currentStep} de {totalSteps}
+            </Badge>
+            
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Cerrar Sesión
             </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Crear Nueva Campaña</h1>
-            <p className="text-gray-600 mt-1">Completa todos los pasos para publicar tu campaña</p>
           </div>
         </div>
-        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-          Paso {currentStep} de {totalSteps}
-        </Badge>
-      </div>
 
       {/* Progress */}
       <div className="mb-8">
@@ -752,5 +771,6 @@ export default function CreateCampaignPage() {
       </div>
     </div>
     </form>
+    </CreateCampaignRoute>
   )
 }

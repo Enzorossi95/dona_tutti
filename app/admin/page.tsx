@@ -17,15 +17,20 @@ import {
   MoreHorizontal,
   MapPin,
   Heart,
+  LogOut,
+  User,
 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import Image from "next/image"
 import Link from "next/link"
 
 import { useSummary } from "@/hooks/api/useSummary"
+import { AdminRoute } from "@/components/auth/ProtectedRoute"
+import { useAuth } from "@/lib/auth/authContext"
 
 export default function AdminDashboard() {
   const { summary, isLoading, isError } = useSummary()
+  const { user, logout } = useAuth()
 
   const campaigns = [
     {
@@ -103,20 +108,36 @@ export default function AdminDashboard() {
   }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600 mt-1">Gestiona tus campañas y ve el progreso de tus donaciones</p>
+    <AdminRoute>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600 mt-1">Gestiona tus campañas y ve el progreso de tus donaciones</p>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            {/* User info */}
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <User className="h-4 w-4" />
+              <span>{user?.firstName || user?.username}</span>
+              <Badge variant="outline">{user?.role?.name}</Badge>
+            </div>
+            
+            <Link href="/admin/campanas/crear">
+              <Button className="bg-green-600 hover:bg-green-700">
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Campaña
+              </Button>
+            </Link>
+            
+            <Button variant="outline" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" />
+              Cerrar Sesión
+            </Button>
+          </div>
         </div>
-        <Link href="/admin/campanas/crear">
-          <Button className="bg-green-600 hover:bg-green-700">
-            <Plus className="h-4 w-4 mr-2" />
-            Nueva Campaña
-          </Button>
-        </Link>
-      </div>
 
       {/* Estadísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -351,5 +372,6 @@ export default function AdminDashboard() {
         </Card>
       </div>
     </div>
+    </AdminRoute>
   )
 }

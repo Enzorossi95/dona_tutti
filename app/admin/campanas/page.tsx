@@ -26,6 +26,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import { campaigns } from "@/lib/data/campaigns"
+import { AdminRoute } from "@/components/auth/ProtectedRoute"
 
 export default function AdminCampaignsPage() {
   const [searchTerm, setSearchTerm] = useState("")
@@ -70,7 +71,8 @@ export default function AdminCampaignsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <AdminRoute>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
@@ -275,6 +277,7 @@ export default function AdminCampaignsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </AdminRoute>
   )
 }
