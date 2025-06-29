@@ -4,6 +4,7 @@ import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { User, LogOut } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth/authContext';
 
 interface UserInfoProps {
@@ -17,11 +18,18 @@ export const UserInfo: React.FC<UserInfoProps> = ({
   showRole = true, 
   className = '' 
 }) => {
+  const router = useRouter();
   const { user, logout, isAuthenticated } = useAuth();
 
   if (!isAuthenticated || !user) {
     return null;
   }
+
+  // Handle logout with redirect to home
+  const handleLogout = async () => {
+    await logout();
+    router.push('/');
+  };
 
   const getRoleBadgeVariant = (roleName: string) => {
     switch (roleName) {
@@ -70,7 +78,7 @@ export const UserInfo: React.FC<UserInfoProps> = ({
 
       {/* Logout Button */}
       {showLogout && (
-        <Button variant="outline" size="sm" onClick={logout}>
+        <Button variant="outline" size="sm" onClick={handleLogout}>
           <LogOut className="h-4 w-4 mr-2" />
           Cerrar Sesión
         </Button>

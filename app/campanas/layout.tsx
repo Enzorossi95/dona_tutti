@@ -1,13 +1,26 @@
+"use client"
+
 import type React from "react"
-import { Heart } from "lucide-react"
+import { Heart, LogOut, LogIn } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useAuth } from "@/lib/auth/authContext"
 
 export default function PublicLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const router = useRouter()
+  const { isAuthenticated, logout } = useAuth()
+
+  // Handle logout with redirect to home
+  const handleLogout = async () => {
+    await logout()
+    router.push('/')
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header Público */}
@@ -30,10 +43,24 @@ export default function PublicLayout({
               </Link>
             </nav>
             <div className="flex items-center space-x-4">
-              
-              <Link href="/admin/campanas/crear">
-                <Button variant="outline">Crear Campaña Gratis</Button>
-              </Link>
+              {isAuthenticated ? (
+                <>
+                  <Link href="/admin/campanas/crear">
+                    <Button variant="outline">Crear Campaña Gratis</Button>
+                  </Link>
+                  <Button variant="ghost" onClick={handleLogout}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    Salir
+                  </Button>
+                </>
+              ) : (
+                <Link href="/login">
+                  <Button variant="outline">
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

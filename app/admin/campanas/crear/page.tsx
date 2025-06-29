@@ -304,7 +304,7 @@ export default function CreateCampaignPage() {
             {/* User info */}
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <User className="h-4 w-4" />
-              <span>{user?.firstName || user?.username}</span>
+              <span>{user?.firstName || user?.email}</span>
               <Badge variant="outline">{user?.role?.name}</Badge>
             </div>
             
@@ -312,10 +312,6 @@ export default function CreateCampaignPage() {
               Paso {currentStep} de {totalSteps}
             </Badge>
             
-            <Button variant="outline" onClick={logout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesión
-            </Button>
           </div>
         </div>
 

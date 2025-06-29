@@ -118,13 +118,6 @@ export default function AdminDashboard() {
           </div>
           
           <div className="flex items-center space-x-4">
-            {/* User info */}
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
-              <User className="h-4 w-4" />
-              <span>{user?.firstName || user?.username}</span>
-              <Badge variant="outline">{user?.role?.name}</Badge>
-            </div>
-            
             <Link href="/admin/campanas/crear">
               <Button className="bg-green-600 hover:bg-green-700">
                 <Plus className="h-4 w-4 mr-2" />
@@ -132,10 +125,6 @@ export default function AdminDashboard() {
               </Button>
             </Link>
             
-            <Button variant="outline" onClick={logout}>
-              <LogOut className="h-4 w-4 mr-2" />
-              Cerrar Sesión
-            </Button>
           </div>
         </div>
 
@@ -328,7 +317,7 @@ export default function AdminDashboard() {
         </CardContent>
       </Card>
 
-      {/* Acciones Rápidas */}
+     {/* Acciones Rápidas 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card>
           <CardContent className="p-6 text-center">
@@ -371,6 +360,7 @@ export default function AdminDashboard() {
           </CardContent>
         </Card>
       </div>
+      */}
     </div>
     </AdminRoute>
   )
