@@ -10,14 +10,21 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { ArrowLeft, Upload, X, Plus, MapPin, DollarSign, Camera, Save, Eye, User, LogOut } from "lucide-react"
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
-import { CreateCampaignForm } from "@/types/createCampaingform"
+import { CreateCampaignForm, PaymentMethod, PaymentMethodSelection, OrganizerInfo } from "@/types/createCampaingform"
 import { CreateCampaignRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/lib/auth/authContext"
+import { useInitialData } from "@/hooks/api/campaigns/useInitialData"
+import { useCreateCampaign } from "@/hooks/api/campaigns/useCreateCampaign"
+import { useRouter } from "next/navigation"
 
 export default function CreateCampaignPage() {
-  const { user, logout } = useAuth()
+  const router = useRouter()
+  const { user } = useAuth()
+  const { isLoading: isLoadingData, paymentMethods: availablePaymentMethods, organizer: organizerInfo, error } = useInitialData(user?.id)
+  const { createCampaign, isLoading: isCreating, error: createError, isSuccess } = useCreateCampaign()
+  
   const [formData, setFormData] = useState<CreateCampaignForm>({
     title: "",
     description: "",
@@ -30,11 +37,14 @@ export default function CreateCampaignPage() {
     requiredHelp: "",
     urgencyReason: "",
     currentSituation: "",
-    contactName: "",
-    contactPhone: "",
-    contactEmail: "",
-    contactWebsite: "",
     paymentMethods: [],
+    organizer: {
+      id: "",
+      name: "",
+      email: "",
+      website: "",
+      phone: "",
+    },
   })
 
   const [images, setImages] = useState<string[]>([])
@@ -43,12 +53,108 @@ export default function CreateCampaignPage() {
   const [errors, setErrors] = useState<{[key: string]: string}>({})
   const [touchedFields, setTouchedFields] = useState<{[key: string]: boolean}>({})
 
+  // Pre-load organizer information when it becomes available
+  useEffect(() => {
+    if (organizerInfo && !formData.organizer.id) {
+      setFormData(prev => ({
+        ...prev,
+        organizer: {
+          id: organizerInfo.id,
+          name: organizerInfo.name || "",
+          phone: organizerInfo.phone || "",
+          email: organizerInfo.email || "",
+          website: organizerInfo.website || "",
+        },
+      }))
+    }
+  }, [organizerInfo?.id]) // Only depend on organizer ID to avoid unnecessary re-runs
+
+  // Show error if data loading fails
+  useEffect(() => {
+    if (error) {
+      console.error('Error loading initial data:', error)
+    }
+  }, [error])
+
+  // Handle successful campaign creation
+  useEffect(() => {
+    if (isSuccess) {
+      alert('¡Campaña creada exitosamente!')
+      router.push('/admin/campanas')
+    }
+  }, [isSuccess, router])
+
+  // Show creation errors
+  useEffect(() => {
+    if (createError) {
+      console.error('Error creating campaign:', createError)
+      alert(`Error al crear la campaña: ${createError.message}`)
+    }
+  }, [createError])
+
   const handleInputChange = (field: string, value: string) => {
-    setFormData((estadoActual: CreateCampaignForm) => ({ ...estadoActual, [field]: value }))
+    setFormData((estadoActual: CreateCampaignForm) => {
+      // Handle nested organizer fields
+      if (field.startsWith('organizer.')) {
+        const organizerField = field.split('.')[1]
+        return {
+          ...estadoActual,
+          organizer: {
+            ...estadoActual.organizer,
+            [organizerField]: value
+          }
+        }
+      }
+      
+      // Handle regular fields
+      return { ...estadoActual, [field]: value }
+    })
+    
     // Limpiar error cuando el usuario empiece a escribir
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: '' }))
     }
+  }
+
+  const handlePaymentMethodChange = (paymentMethodId: number, checked: boolean, instructions: string = "") => {
+    setFormData((prev: CreateCampaignForm) => {
+      let newPaymentMethods: PaymentMethodSelection[]
+      
+      if (checked) {
+        // Add new payment method
+        newPaymentMethods = [...prev.paymentMethods, { payment_method_id: paymentMethodId, instructions }]
+      } else {
+        // Remove payment method
+        newPaymentMethods = prev.paymentMethods.filter(pm => pm.payment_method_id !== paymentMethodId)
+      }
+      
+      // Clear payment methods error if at least one is selected
+      if (newPaymentMethods.length > 0 && errors.paymentMethods) {
+        setErrors(prevErrors => ({ ...prevErrors, paymentMethods: '' }))
+      }
+      
+      return { ...prev, paymentMethods: newPaymentMethods }
+    })
+  }
+
+  const handlePaymentMethodInstructionsChange = (paymentMethodId: number, instructions: string) => {
+    setFormData((prev: CreateCampaignForm) => ({
+      ...prev,
+      paymentMethods: prev.paymentMethods.map(pm => 
+        pm.payment_method_id === paymentMethodId 
+          ? { ...pm, instructions }
+          : pm
+      )
+    }))
+  }
+
+  const isPaymentMethodSelected = (paymentMethodId: number): boolean => {
+    return formData.paymentMethods.some(pm => pm.payment_method_id === paymentMethodId)
+  }
+
+  const getPaymentMethodInstructions = (paymentMethodId: number): string => {
+    const paymentMethod = formData.paymentMethods.find(pm => pm.payment_method_id === paymentMethodId)
+    return paymentMethod?.instructions || ""
   }
 
   const validateField = (field: string, value: string) => {
@@ -88,17 +194,17 @@ export default function CreateCampaignPage() {
           error = 'La ayuda necesaria es obligatoria'
         }
         break
-      case 'contactName':
+      case 'organizer.name':
         if (!value.trim()) {
           error = 'El nombre de la organización es obligatorio'
         }
         break
-      case 'contactPhone':
+      case 'organizer.phone':
         if (!value.trim()) {
           error = 'El teléfono de contacto es obligatorio'
         }
         break
-      case 'contactEmail':
+      case 'organizer.email':
         if (!value.trim()) {
           error = 'El email de contacto es obligatorio'
         }
@@ -111,26 +217,40 @@ export default function CreateCampaignPage() {
         break
     }
     
-    setErrors(prev => ({ ...prev, [field]: error }))
+    // Map nested field names to error keys for consistency
+    let errorKey = field
+    if (field === 'organizer.name') errorKey = 'organizerName'
+    if (field === 'organizer.phone') errorKey = 'organizerPhone'
+    if (field === 'organizer.email') errorKey = 'organizerEmail'
+    
+    setErrors(prev => ({ ...prev, [errorKey]: error }))
     return error === ''
   }
 
   const handleArrayChange = (field: string, value: string, checked: boolean) => {
+    // This function is only used for non-paymentMethods string arrays
+    if (field === 'paymentMethods') {
+      console.warn('Use handlePaymentMethodChange for payment methods')
+      return
+    }
+    
     setFormData((estadoActual: CreateCampaignForm) => {
-      const currentArray = estadoActual[field as keyof CreateCampaignForm] as string[]
+      // Create a new object with the updated array field
+      // Since we exclude paymentMethods above, we know this is a string array
+      const newFormData = { ...estadoActual }
+      
+      // Type assertion is safe here since we've excluded paymentMethods
+      const currentArray = (estadoActual as any)[field] as string[] || []
       let newArray: string[]
+      
       if (checked) {
         newArray = [...currentArray, value]
       } else {
         newArray = currentArray.filter((item: string) => item !== value)
       }
       
-      // Limpiar error de paymentMethods si se selecciona algún método
-      if (field === 'paymentMethods' && newArray.length > 0 && errors.paymentMethods) {
-        setErrors(prev => ({ ...prev, paymentMethods: '' }))
-      }
-      
-      return { ...estadoActual, [field]: newArray }
+      (newFormData as any)[field] = newArray
+      return newFormData
     })
   }
 
@@ -189,16 +309,16 @@ export default function CreateCampaignPage() {
         break
       case 4:
         // Validar campos obligatorios del paso 4
-        if (!formData.contactName.trim()) {
-          stepErrors.contactName = 'El nombre de la organización es obligatorio'
+        if (!formData.organizer.name.trim()) {
+          stepErrors.organizerName = 'El nombre de la organización es obligatorio'
           isValid = false
         }
-        if (!formData.contactPhone.trim()) {
-          stepErrors.contactPhone = 'El teléfono de contacto es obligatorio'
+        if (!formData.organizer.phone?.trim()) {
+          stepErrors.organizerPhone = 'El teléfono de contacto es obligatorio'
           isValid = false
         }
-        if (!formData.contactEmail.trim()) {
-          stepErrors.contactEmail = 'El email de contacto es obligatorio'
+        if (!formData.organizer.email.trim()) {
+          stepErrors.organizerEmail = 'El email de contacto es obligatorio'
           isValid = false
         }
         if (!formData.paymentMethods.length) {
@@ -233,7 +353,7 @@ export default function CreateCampaignPage() {
       case 3:
         return ['images']
       case 4:
-        return ['contactName', 'contactPhone', 'contactEmail', 'paymentMethods']
+        return ['organizerName', 'organizerPhone', 'organizerEmail', 'paymentMethods']
       default:
         return []
     }
@@ -270,15 +390,57 @@ export default function CreateCampaignPage() {
 
   const progressPercentage = (currentStep / totalSteps) * 100
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     
     // Validar el paso actual antes de enviar
     if (!validateCurrentStep()) {
       return // No enviar si hay errores
     }
-    
-    console.log('Formulario válido, enviando...', formData)
+
+    // Don't submit if already creating
+    if (isCreating) {
+      return
+    }
+
+    try {
+      // Prepare data in the format expected by the backend
+      const organizerInfo = {
+        id: formData.organizer.id,
+        name: formData.organizer.name,
+        phone: formData.organizer.phone,
+        email: formData.organizer.email,
+        website: formData.organizer.website,
+      }
+
+      const campaignData = {
+        title: formData.title,
+        description: formData.description,
+        image: images[0] || "", // Use first image as main image
+        goal: parseInt(formData.goal),
+        start_date: new Date().toISOString(),
+        end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days from now
+        location: formData.location,
+        category: "550e8400-e29b-41d4-a716-446655440001", // TODO: Map category to UUID
+        urgency: formData.urgency === "critical" ? 10 : formData.urgency === "high" ? 8 : formData.urgency === "medium" ? 5 : 2,
+        status: "active",
+        payment_methods: formData.paymentMethods,
+        beneficiary_name: formData.beneficiaryName,
+        beneficiary_age: parseInt(formData.beneficiaryAge) || null,
+        current_situation: formData.currentSituation,
+        urgency_reason: formData.urgencyReason,
+        required_help: formData.requiredHelp,
+        // Contact information
+        organizer: organizerInfo,
+      }
+
+      // Use the hook to create the campaign
+      await createCampaign(campaignData)
+      
+    } catch (error) {
+      // Error handling is done in the useEffect for createError
+      console.error('Error submitting campaign:', error)
+    }
   }
 
   return (
@@ -319,6 +481,24 @@ export default function CreateCampaignPage() {
       <div className="mb-8">
         <Progress value={progressPercentage} className="h-2" />
       </div>
+
+      {/* Error Messages */}
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <p className="text-red-800 text-sm">
+            Error cargando datos iniciales: {error.message}
+          </p>
+        </div>
+      )}
+
+      {/* Loading Initial Data */}
+      {isLoadingData && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-blue-800 text-sm">
+            Cargando información inicial...
+          </p>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Formulario Principal */}
@@ -527,6 +707,7 @@ export default function CreateCampaignPage() {
                             className="w-full h-32 object-cover rounded-lg border"
                           />
                           <Button
+                            type="button"
                             variant="destructive"
                             size="sm"
                             className="absolute top-2 right-2 h-6 w-6 p-0"
@@ -539,6 +720,7 @@ export default function CreateCampaignPage() {
                       ))}
 
                       <button
+                        type="button"
                         onClick={addImage}
                         className="h-32 border-2 border-dashed border-gray-300 rounded-lg flex flex-col items-center justify-center hover:border-gray-400 transition-colors"
                       >
@@ -550,7 +732,7 @@ export default function CreateCampaignPage() {
                       <p className="text-red-500 text-sm mt-1">{errors.images}</p>
                     )}
                   </div>
-
+                  {/*
                   <div>
                     <Label>Documentos Médicos (Opcional)</Label>
                     <p className="text-sm text-gray-600 mb-3">
@@ -561,6 +743,7 @@ export default function CreateCampaignPage() {
                       Subir Documentos
                     </Button>
                   </div>
+                  */}
                 </div>
               )}
 
@@ -569,19 +752,26 @@ export default function CreateCampaignPage() {
                 <div className="space-y-4">
                   <div>
                     <Label className="text-sm font-medium mb-2">Información de Contacto</Label>
+                    {organizerInfo && (
+                      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <p className="text-sm text-blue-800">
+                          ℹ️ Información pre-cargada desde tu perfil de organizador. Puedes modificarla si es necesario.
+                        </p>
+                      </div>
+                    )}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="contactName" className="text-sm font-medium mb-2">Nombre de la organización</Label>
                       <Input
                         id="contactName"
                         placeholder="Ej: Fundación Animal"
-                        value={formData.contactName}
-                        onChange={(e) => handleInputChange("contactName", e.target.value)}
-                        onBlur={(e) => validateField("contactName", e.target.value)}
-                        className={errors.contactName ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
+                        value={formData.organizer.name}
+                        onChange={(e) => handleInputChange("organizer.name", e.target.value)}
+                        onBlur={(e) => validateField("organizer.name", e.target.value)}
+                        className={errors.organizerName ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                       />
-                      {errors.contactName && (
-                        <p className="text-red-500 text-sm mt-1">{errors.contactName}</p>
+                      {errors.organizerName && (
+                        <p className="text-red-500 text-sm mt-1">{errors.organizerName}</p>
                       )}
                     </div>
                     <div>
@@ -589,13 +779,13 @@ export default function CreateCampaignPage() {
                       <Input
                         id="contactPhone"
                         placeholder="11-1234-5678"
-                        value={formData.contactPhone}
-                        onChange={(e) => handleInputChange("contactPhone", e.target.value)}
-                        onBlur={(e) => validateField("contactPhone", e.target.value)}
-                        className={errors.contactPhone ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
+                        value={formData.organizer.phone}
+                        onChange={(e) => handleInputChange("organizer.phone", e.target.value)}
+                        onBlur={(e) => validateField("organizer.phone", e.target.value)}
+                        className={errors.organizerPhone ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                       />
-                      {errors.contactPhone && (
-                        <p className="text-red-500 text-sm mt-1">{errors.contactPhone}</p>
+                      {errors.organizerPhone && (
+                        <p className="text-red-500 text-sm mt-1">{errors.organizerPhone}</p>
                       )}
                     </div>
                     <div>
@@ -603,60 +793,75 @@ export default function CreateCampaignPage() {
                       <Input 
                         id="contactEmail" 
                         placeholder="Email de contacto" 
-                        value={formData.contactEmail} 
-                        onChange={(e) => handleInputChange("contactEmail", e.target.value)} 
+                        value={formData.organizer.email} 
+                        onChange={(e) => handleInputChange("organizer.email", e.target.value)} 
                         type="email"
-                        onBlur={(e) => validateField("contactEmail", e.target.value)}
-                        className={errors.contactEmail ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
+                        onBlur={(e) => validateField("organizer.email", e.target.value)}
+                        className={errors.organizerEmail ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                       />
-                      {errors.contactEmail && (
-                        <p className="text-red-500 text-sm mt-1">{errors.contactEmail}</p>
+                      {errors.organizerEmail && (
+                        <p className="text-red-500 text-sm mt-1">{errors.organizerEmail}</p>
                       )}
                     </div>
                     <div>
                       <Label htmlFor="contactWebsite" className="text-sm font-medium mb-2">Sitio web (opcional)</Label>
                       <Input
-                        id="contactWebsite"
+                        id="organizer.website"
                         placeholder="Sitio web (opcional)" 
-                        value={formData.contactWebsite} onChange={(e) => handleInputChange("contactWebsite", e.target.value)} />
+                        value={formData.organizer.website} onChange={(e) => handleInputChange("organizer.website", e.target.value)} />
                     </div>
                   </div>
                   </div>
 
                   <div>
-                    <Label>Métodos de Pago</Label>
-                    <div className="space-y-2 mt-2">
-                      <div className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          id="mercadopago" 
-                          defaultChecked 
-                          onChange={(e) => handleArrayChange("paymentMethods", "mercadopago", e.target.checked)}
-                        />
-                        <label htmlFor="mercadopago" className="text-sm">
-                          MercadoPago
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          id="transfer" 
-                          onChange={(e) => handleArrayChange("paymentMethods", "transfer", e.target.checked)}
-                        />
-                        <label htmlFor="transfer" className="text-sm">
-                          Transferencia Bancaria
-                        </label>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <input 
-                          type="checkbox" 
-                          id="cash" 
-                          onChange={(e) => handleArrayChange("paymentMethods", "cash", e.target.checked)}
-                        />
-                        <label htmlFor="cash" className="text-sm">
-                          Efectivo
-                        </label>
-                      </div>
+                    <Label>Métodos de Pago *</Label>
+                    <p className="text-sm text-gray-600 mb-3">
+                      Selecciona los métodos de pago que aceptarás y agrega instrucciones específicas para cada uno.
+                    </p>
+                    <div className="space-y-4 mt-2">
+                      {availablePaymentMethods.map((pm: PaymentMethod) => (
+                        <div key={pm.id} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex items-center space-x-2">
+                            <input 
+                              type="checkbox" 
+                              id={`pm-${pm.id}`} 
+                              checked={isPaymentMethodSelected(pm.id)}
+                              onChange={(e) => handlePaymentMethodChange(pm.id, e.target.checked, "")}
+                            />
+                            <label htmlFor={`pm-${pm.id}`} className="text-sm font-medium">
+                              {pm.name}
+                            </label>
+                          </div>
+                          
+                          {isPaymentMethodSelected(pm.id) && (
+                            <div>
+                              <Label htmlFor={`instructions-${pm.id}`} className="text-sm font-medium mb-2">
+                                Instrucciones para {pm.name}
+                              </Label>
+                              <Textarea
+                                id={`instructions-${pm.id}`}
+                                placeholder={`Ingresa las instrucciones específicas para ${pm.name.toLowerCase()} (ej: número de cuenta, CBU, datos de contacto, etc.)`}
+                                value={getPaymentMethodInstructions(pm.id)}
+                                onChange={(e) => handlePaymentMethodInstructionsChange(pm.id, e.target.value)}
+                                rows={3}
+                                className="mt-1"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      
+                      {availablePaymentMethods.length === 0 && !isLoadingData && (
+                        <div className="text-sm text-gray-500 text-center py-4">
+                          No hay métodos de pago disponibles
+                        </div>
+                      )}
+                      
+                      {isLoadingData && (
+                        <div className="text-sm text-gray-500 text-center py-4">
+                          Cargando métodos de pago...
+                        </div>
+                      )}
                     </div>
                     {errors.paymentMethods && (
                       <p className="text-red-500 text-sm mt-1">{errors.paymentMethods}</p>
@@ -677,22 +882,40 @@ export default function CreateCampaignPage() {
 
               {/* Botones de Navegación */}
               <div className="flex justify-between pt-6 border-t">
-                <Button variant="outline" onClick={prevStep} disabled={currentStep === 1}>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={prevStep} 
+                  disabled={currentStep === 1 || isCreating}
+                >
                   Anterior
                 </Button>
 
                 <div className="space-x-2">
-                  <Button variant="outline">
+                  <Button type="button" variant="outline" disabled={isCreating}>
                     <Save className="h-4 w-4 mr-2" />
                     Guardar Borrador
                   </Button>
 
                   {currentStep < totalSteps ? (
-                    <Button onClick={nextStep}>Siguiente</Button>
+                    <Button type="button" onClick={nextStep} disabled={isCreating}>Siguiente</Button>
                   ) : (
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700">
-                      <Eye className="h-4 w-4 mr-2" />
-                      Publicar Campaña
+                    <Button 
+                      type="submit" 
+                      className="bg-green-600 hover:bg-green-700"
+                      disabled={isCreating}
+                    >
+                      {isCreating ? (
+                        <>
+                          <div className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          Creando Campaña...
+                        </>
+                      ) : (
+                        <>
+                          <Eye className="h-4 w-4 mr-2" />
+                          Publicar Campaña
+                        </>
+                      )}
                     </Button>
                   )}
                 </div>

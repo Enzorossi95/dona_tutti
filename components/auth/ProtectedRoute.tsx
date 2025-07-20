@@ -46,11 +46,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Check role requirements and redirect if not met
     if (requireRoles.length > 0 && user) {
       const hasRequiredRole = requireRoles.some(role => hasRole(role));
-      console.log('Role check:', {
-        userRole: user.role?.name,
-        requiredRoles: requireRoles,
-        hasRequiredRole
-      });
+      
       
       if (!hasRequiredRole) {
         console.log('Insufficient role - user does not have required role');

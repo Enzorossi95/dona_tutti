@@ -1,3 +1,23 @@
+export interface PaymentMethodSelection {
+  payment_method_id: number;
+  instructions: string;
+}
+
+export interface PaymentMethod {
+  id: number;
+  code: string;
+  name: string;
+  is_active: boolean;
+}
+
+export interface OrganizerInfo {
+  id: string;
+  name: string;
+  phone?: string;
+  email: string;
+  website?: string;
+}
+
 export interface CreateCampaignForm {
     title: string,
     description: string,
@@ -10,9 +30,6 @@ export interface CreateCampaignForm {
     requiredHelp: string,
     urgencyReason: string,
     currentSituation: string,
-    contactName: string,
-    contactPhone: string,
-    contactEmail: string,
-    contactWebsite: string,
-    paymentMethods: string[],
+    paymentMethods: PaymentMethodSelection[],
+    organizer: OrganizerInfo,
   }
