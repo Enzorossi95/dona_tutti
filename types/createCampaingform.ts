@@ -24,7 +24,7 @@ export interface CreateCampaignForm {
     goal: string,
     location: string,
     urgency: "low" | "medium" | "high" | "critical",
-    category: "medical" | "rescue" | "food" | "shelter",
+    category: string, // Changed to string to store category ID
     beneficiaryName: string,
     beneficiaryAge: string,
     requiredHelp: string,

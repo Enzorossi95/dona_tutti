@@ -17,6 +17,9 @@ import { CreateCampaignRoute } from "@/components/auth/ProtectedRoute"
 import { useAuth } from "@/lib/auth/authContext"
 import { useInitialData } from "@/hooks/api/campaigns/useInitialData"
 import { useCreateCampaign } from "@/hooks/api/campaigns/useCreateCampaign"
+import { useCategories } from "@/hooks/api/categories/useCategories"
+import { useToast } from "@/hooks/useToast"
+import { Toast } from "@/components/ui/toast"
 import { useRouter } from "next/navigation"
 
 export default function CreateCampaignPage() {
@@ -24,6 +27,8 @@ export default function CreateCampaignPage() {
   const { user } = useAuth()
   const { isLoading: isLoadingData, paymentMethods: availablePaymentMethods, organizer: organizerInfo, error } = useInitialData(user?.id)
   const { createCampaign, isLoading: isCreating, error: createError, isSuccess } = useCreateCampaign()
+  const { categories, isLoading: isLoadingCategories, error: categoriesError } = useCategories()
+  const { toasts, showSuccess, showError, dismissToast } = useToast()
   
   const [formData, setFormData] = useState<CreateCampaignForm>({
     title: "",
@@ -31,7 +36,7 @@ export default function CreateCampaignPage() {
     goal: "",
     location: "",
     urgency: "medium",
-    category: "medical",
+    category: "",
     beneficiaryName: "",
     beneficiaryAge: "",
     requiredHelp: "",
@@ -69,28 +74,44 @@ export default function CreateCampaignPage() {
     }
   }, [organizerInfo?.id]) // Only depend on organizer ID to avoid unnecessary re-runs
 
+  // Set default category when categories load
+  useEffect(() => {
+    if (categories.length > 0 && !formData.category) {
+      // Set the first category as default
+      setFormData(prev => ({
+        ...prev,
+        category: categories[0].id
+      }))
+    }
+  }, [categories, formData.category])
+
   // Show error if data loading fails
   useEffect(() => {
     if (error) {
       console.error('Error loading initial data:', error)
     }
-  }, [error])
+    if (categoriesError) {
+      console.error('Error loading categories:', categoriesError)
+    }
+  }, [error, categoriesError])
 
   // Handle successful campaign creation
   useEffect(() => {
     if (isSuccess) {
-      alert('¡Campaña creada exitosamente!')
-      router.push('/admin/campanas')
+      showSuccess('¡Campaña creada exitosamente!')
+      setTimeout(() => {
+        router.push('/admin/campanas')
+      }, 4000) // Give more time to see the success message
     }
-  }, [isSuccess, router])
+  }, [isSuccess, router, showSuccess])
 
   // Show creation errors
   useEffect(() => {
     if (createError) {
       console.error('Error creating campaign:', createError)
-      alert(`Error al crear la campaña: ${createError.message}`)
+      showError(`Error al crear la campaña: ${createError.message}`)
     }
-  }, [createError])
+  }, [createError, showError])
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((estadoActual: CreateCampaignForm) => {
@@ -207,6 +228,14 @@ export default function CreateCampaignPage() {
       case 'organizer.email':
         if (!value.trim()) {
           error = 'El email de contacto es obligatorio'
+        }
+        break
+      case 'beneficiaryAge':
+        if (value.trim()) {
+          const age = parseInt(value.trim())
+          if (isNaN(age) || age <= 0) {
+            error = 'La edad debe ser un número válido mayor a 0'
+          }
         }
         break
       case 'paymentMethods':
@@ -404,47 +433,86 @@ export default function CreateCampaignPage() {
     }
 
     try {
+      // Validate required fields
+      if (!formData.goal.trim()) {
+        throw new Error('El objetivo de recaudación es obligatorio')
+      }
+
       // Prepare data in the format expected by the backend
       const organizerInfo = {
         id: formData.organizer.id,
         name: formData.organizer.name,
-        phone: formData.organizer.phone,
+        phone: formData.organizer.phone || undefined,
         email: formData.organizer.email,
-        website: formData.organizer.website,
+        website: formData.organizer.website || undefined,
+      }
+
+      // Parse and validate numeric fields
+      const goalNumber = parseInt(formData.goal.trim())
+      if (isNaN(goalNumber) || goalNumber <= 0) {
+        throw new Error('El objetivo debe ser un número válido mayor a 0')
+      }
+
+      const beneficiaryAge = formData.beneficiaryAge.trim() 
+        ? parseInt(formData.beneficiaryAge.trim()) 
+        : null
+      
+      if (beneficiaryAge !== null && (isNaN(beneficiaryAge) || beneficiaryAge <= 0)) {
+        throw new Error('La edad debe ser un número válido mayor a 0')
       }
 
       const campaignData = {
-        title: formData.title,
-        description: formData.description,
+        title: formData.title.trim(),
+        description: formData.description.trim(),
         image: images[0] || "", // Use first image as main image
-        goal: parseInt(formData.goal),
+        goal: goalNumber,
         start_date: new Date().toISOString(),
         end_date: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days from now
-        location: formData.location,
-        category: "550e8400-e29b-41d4-a716-446655440001", // TODO: Map category to UUID
+        location: formData.location.trim(),
+        category: formData.category,
         urgency: formData.urgency === "critical" ? 10 : formData.urgency === "high" ? 8 : formData.urgency === "medium" ? 5 : 2,
         status: "active",
         payment_methods: formData.paymentMethods,
-        beneficiary_name: formData.beneficiaryName,
-        beneficiary_age: parseInt(formData.beneficiaryAge) || null,
-        current_situation: formData.currentSituation,
-        urgency_reason: formData.urgencyReason,
-        required_help: formData.requiredHelp,
+        beneficiary_name: formData.beneficiaryName.trim(),
+        beneficiary_age: beneficiaryAge,
+        current_situation: formData.currentSituation.trim(),
+        urgency_reason: formData.urgencyReason.trim(),
+        required_help: formData.requiredHelp.trim(),
         // Contact information
         organizer: organizerInfo,
       }
+
+      // Add detailed logging for debugging
+      console.log('Sending campaign data to API:', JSON.stringify(campaignData, null, 2))
 
       // Use the hook to create the campaign
       await createCampaign(campaignData)
       
     } catch (error) {
-      // Error handling is done in the useEffect for createError
+      // Handle validation errors and show them as toasts
       console.error('Error submitting campaign:', error)
+      if (error instanceof Error) {
+        showError(error.message)
+      } else {
+        showError('Error inesperado al crear la campaña')
+      }
     }
   }
 
   return (
     <CreateCampaignRoute>
+      {/* Toast Container */}
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          variant={toast.variant}
+          duration={toast.duration}
+          onClose={() => dismissToast(toast.id)}
+        >
+          {toast.message}
+        </Toast>
+      ))}
+      
       <form onSubmit={handleSubmit}>
       <div className="space-y-6">
         {/* Header */}
@@ -599,15 +667,25 @@ export default function CreateCampaignPage() {
                       <Label htmlFor="category" className="text-sm font-medium mb-2">Categoría</Label>
                       <Select value={formData.category} onValueChange={(value) => handleInputChange("category", value)}>
                         <SelectTrigger className="w-full">
-                          <SelectValue />
+                          <SelectValue placeholder="Selecciona una categoría" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="medical">Médico</SelectItem>
-                          <SelectItem value="rescue">Rescate</SelectItem>
-                          <SelectItem value="food">Alimentación</SelectItem>
-                          <SelectItem value="shelter">Refugio</SelectItem>
+                          {isLoadingCategories ? (
+                            <SelectItem value="loading" disabled>Cargando categorías...</SelectItem>
+                          ) : categories.length > 0 ? (
+                            categories.map((category) => (
+                              <SelectItem key={category.id} value={category.id}>
+                                {category.name}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="no-categories" disabled>No hay categorías disponibles</SelectItem>
+                          )}
                         </SelectContent>
                       </Select>
+                      {categoriesError && (
+                        <p className="text-red-500 text-sm mt-1">Error cargando categorías</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -635,10 +713,16 @@ export default function CreateCampaignPage() {
                       <Label htmlFor="beneficiaryAge" className="text-sm font-medium mb-2">Edad (Opcional)</Label>
                       <Input
                         id="beneficiaryAge"
-                        placeholder="2 años, 35 años, etc."
+                        type="number"
+                        placeholder="2"
                         value={formData.beneficiaryAge}
                         onChange={(e) => handleInputChange("beneficiaryAge", e.target.value)}
+                        onBlur={(e) => validateField("beneficiaryAge", e.target.value)}
+                        className={errors.beneficiaryAge ? "border-red-500 focus:border-red-500 focus:ring-red-500" : ""}
                       />
+                      {errors.beneficiaryAge && (
+                        <p className="text-red-500 text-sm mt-1">{errors.beneficiaryAge}</p>
+                      )}
                     </div>
                   </div>
 
