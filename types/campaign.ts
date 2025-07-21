@@ -4,18 +4,24 @@ export interface Campaign {
   description: string
   image: string
   goal: number
-  raised: number
-  donors: number
-  daysLeft: number
+  raised?: number
+  donors?: number
+  daysLeft?: number
   location: string
-  category: CampaignCategory
-  urgency: CampaignUrgency
-  organizer: Organizer
+  category: string // UUID from backend
+  urgency: number // 1-10 scale from backend
+  organizer?: Organizer
   status: CampaignStatus
   animal?: Animal
   images?: string[]
-  createdAt: string
-  lastUpdate: string
+  created_at: string // Backend field name
+  start_date: string
+  end_date: string
+  beneficiary_name: string
+  beneficiary_age?: number | null
+  current_situation: string
+  urgency_reason: string
+  lastUpdate?: string // Calculated field
 }
 
 export interface Animal {
@@ -33,7 +39,7 @@ export interface Organizer {
 
 export type CampaignCategory = 'Médico' | 'Refugio' | 'Alimentación' | 'Rescate'
 export type CampaignUrgency = 'Alta' | 'Media' | 'Baja'
-export type CampaignStatus = 'active' | 'completed' | 'paused' | 'cancelled'
+export type CampaignStatus = 'active' | 'completed' | 'paused' | 'cancelled' | 'draft'
 
 export interface CampaignFilters {
   searchTerm: string
