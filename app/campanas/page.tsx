@@ -2,39 +2,74 @@
 
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search, Filter, ArrowLeft } from "lucide-react"
+import { Search, Filter, ArrowLeft, AlertCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from "next/link"
-import { useState } from "react"
-import { campaigns } from "@/lib/data/campaigns"
+import { useState, useMemo } from "react"
 import { CampaignCard } from "@/components/campaign/CampaignCard"
-
+import { useCampaigns } from "@/hooks/campaigns/useCampaigns"
 
 export default function CampanasPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [filterCategory, setFilterCategory] = useState("all")
+  
+  // Fetch campaigns from backend
+  const { campaigns, isLoading, error } = useCampaigns()
 
+  // Get unique categories from campaigns
+  const categories = useMemo(() => {
+    const uniqueCategories = new Set(campaigns.map(c => c.category))
+    return Array.from(uniqueCategories).sort()
+  }, [campaigns])
 
-  const filteredCampaigns = campaigns.filter((campaign) => {
-    const matchesSearch =
-      campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      campaign.description.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = filterCategory === "all" || campaign.category.toLowerCase() === filterCategory.toLowerCase()
-    return matchesSearch && matchesCategory
-  })
+  // Filter campaigns based on search and category
+  const filteredCampaigns = useMemo(() => {
+    return campaigns.filter((campaign) => {
+      const matchesSearch =
+        campaign.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        campaign.description.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesCategory = filterCategory === "all" || 
+        campaign.category.toLowerCase() === filterCategory.toLowerCase()
+      return matchesSearch && matchesCategory
+    })
+  }, [campaigns, searchTerm, filterCategory])
 
-  const getUrgencyColor = (urgency: string) => {
-    switch (urgency.toLowerCase()) {
-      case "alta":
-        return "bg-red-100 text-red-800"
-      case "media":
-        return "bg-yellow-100 text-yellow-800"
-      case "baja":
-        return "bg-green-100 text-green-800"
-      default:
-        return "bg-gray-100 text-gray-800"
-    }
+  // Loading state
+  if (isLoading) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando campañas...</p>
+          </div>
+        </div>
+      </main>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar las campañas</h2>
+            <p className="text-gray-600 mb-4">
+              No pudimos cargar las campañas disponibles. Por favor, intenta nuevamente más tarde.
+            </p>
+            <Link href="/">
+              <Button variant="outline">
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al inicio
+              </Button>
+            </Link>
+          </div>
+        </div>
+      </main>
+    )
   }
 
   return (
@@ -53,6 +88,7 @@ export default function CampanasPage() {
           </p>
         </div>
       </div>
+      
       {/* Filtros y Búsqueda */}
       <Card className="mb-8">
         <CardContent className="p-6">
@@ -74,10 +110,11 @@ export default function CampanasPage() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas las categorías</SelectItem>
-                <SelectItem value="médico">Médico</SelectItem>
-                <SelectItem value="refugio">Refugio</SelectItem>
-                <SelectItem value="alimentación">Alimentación</SelectItem>
-                <SelectItem value="rescate">Rescate</SelectItem>
+                {categories.map(category => (
+                  <SelectItem key={category} value={category.toLowerCase()}>
+                    {category}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -92,11 +129,27 @@ export default function CampanasPage() {
       </Card>
 
       {/* Grid de Campañas */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredCampaigns.map((campaign) => (
-        <CampaignCard key={campaign.id} campaign={campaign} />
-      ))}
-      </div>
+      {filteredCampaigns.length === 0 ? (
+        <div className="text-center py-12">
+          <div className="max-w-md mx-auto">
+            <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              No se encontraron campañas
+            </h3>
+            <p className="text-gray-600">
+              {searchTerm || filterCategory !== "all" 
+                ? "Intenta ajustar los filtros de búsqueda"
+                : "No hay campañas activas en este momento"}
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredCampaigns.map((campaign) => (
+            <CampaignCard key={campaign.id} campaign={campaign} />
+          ))}
+        </div>
+      )}
 
       {/* Call to Action */}
       <div className="text-center mt-12 bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-8">

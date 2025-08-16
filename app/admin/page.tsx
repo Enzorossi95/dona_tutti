@@ -13,12 +13,12 @@ import Link from "next/link"
 
 import { useSummary } from "@/hooks/api/useSummary"
 import { AdminRoute } from "@/components/auth/ProtectedRoute"
-import { useCampaigns } from "@/hooks/api/campaigns/useCampaigns"
+import { useCampaigns } from "@/hooks/campaigns/useCampaigns"
 import { CampaignAdminList } from "@/components/campaign/CampaignAdminList"
 
 export default function AdminDashboard() {
   const { summary, isLoading } = useSummary()
-  const { campaigns, isLoading: campaignsLoading, error: campaignsError, refetch } = useCampaigns()
+  const { allCampaigns: campaigns, isLoading: campaignsLoading, error: campaignsError, mutate: refetch } = useCampaigns()
 
 
   return (

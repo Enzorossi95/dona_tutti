@@ -5,18 +5,11 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Eye, Download, DollarSign } from "lucide-react"
 import Image from "next/image"
+import { Receipt } from "@/types/receipt"
 
-export interface Receipt {
-  id: number
-  date: string
-  type: string
-  amount: number
-  description: string
-  document: string
-  image: string
-  vendor: string
-  status: string
-}
+// Re-export for compatibility
+export { Receipt }
+
 
 export interface ReceiptListProps {
   receipts: Receipt[]
@@ -131,10 +124,12 @@ export function ReceiptList({
                       <Eye className="h-4 w-4 mr-1" />
                       Ver Detalle
                     </Button>
-                    <Button variant="outline" size="sm" onClick={() => onDownload?.(receipt)}>
-                      <Download className="h-4 w-4 mr-1" />
-                      Descargar
-                    </Button>
+                    {variant === 'admin' && onDownload && (
+                      <Button variant="outline" size="sm" onClick={() => onDownload(receipt)}>
+                        <Download className="h-4 w-4 mr-1" />
+                        Descargar
+                      </Button>
+                    )}
                   </div>
                 )}
               </div>
@@ -144,6 +139,18 @@ export function ReceiptList({
       </CardContent>
     </Card>
   )
+
+  if (receipts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center py-8 text-gray-500">
+            <p>No hay comprobantes registrados aún</p>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
     <div className={`space-y-4 ${className}`}>

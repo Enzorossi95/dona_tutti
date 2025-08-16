@@ -19,6 +19,11 @@ import {
   DollarSign,
   Users,
   Calendar,
+  Heart,
+  AlertCircle,
+  TrendingUp,
+  Clock,
+  Target,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -82,15 +87,15 @@ export function CampaignAdminList({
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
-        return "bg-green-100 text-green-800"
+        return "bg-emerald-50 text-emerald-700 border-emerald-200"
       case "paused":
-        return "bg-yellow-100 text-yellow-800"
+        return "bg-amber-50 text-amber-700 border-amber-200"
       case "completed":
-        return "bg-blue-100 text-blue-800"
+        return "bg-sky-50 text-sky-700 border-sky-200"
       case "draft":
-        return "bg-gray-100 text-gray-800"
+        return "bg-slate-50 text-slate-600 border-slate-200"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "bg-gray-50 text-gray-600 border-gray-200"
     }
   }
 
@@ -107,6 +112,27 @@ export function CampaignAdminList({
       default:
         return status
     }
+  }
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case "active":
+        return <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+      case "paused":
+        return <Pause className="w-3 h-3" />
+      case "completed":
+        return <Target className="w-3 h-3" />
+      case "draft":
+        return <Clock className="w-3 h-3" />
+      default:
+        return null
+    }
+  }
+
+  const getUrgencyBadgeColor = (urgency: number) => {
+    if (urgency >= 8) return "bg-red-50 text-red-700 border-red-200"
+    if (urgency >= 5) return "bg-amber-50 text-amber-700 border-amber-200"
+    return "bg-emerald-50 text-emerald-700 border-emerald-200"
   }
 
   // Loading state
@@ -222,201 +248,242 @@ export function CampaignAdminList({
           const progressPercentage = ((campaign.raised || 0) / campaign.goal) * 100
 
           if (variant === "dashboard") {
-            // Dashboard variant - formato compacto horizontal
+            // Dashboard variant - formato compacto horizontal mejorado
             return (
-              <div key={campaign.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
-                <Image
-                  src={getSafeImageUrl(campaign.image)}
-                  alt={campaign.title}
-                  width={80}
-                  height={60}
-                  className="w-20 h-15 object-cover rounded"
-                />
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between mb-2">
-                    <h3 className="font-semibold text-gray-900 truncate">{campaign.title}</h3>
-                    <Badge className={getStatusColor(campaign.status)}>{getStatusText(campaign.status)}</Badge>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-3">
-                    <div className="flex items-center">
-                      <DollarSign className="h-4 w-4 mr-1" />${(campaign.raised || 0).toLocaleString()} / $
-                      {campaign.goal.toLocaleString()}
-                    </div>
-                    <div className="flex items-center">
-                      <Users className="h-4 w-4 mr-1" />
-                      {campaign.donors || 0} donantes
-                    </div>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-1" />
-                      {campaign.daysLeft && campaign.daysLeft > 0 ? `${campaign.daysLeft} días` : "Finalizada"}
-                    </div>
-                    <div className="flex items-center">
-                      <MapPin className="h-4 w-4 mr-1" />
-                      {campaign.location}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div className="flex-1 mr-4">
-                      <Progress value={progressPercentage} className="h-2" />
-                      <p className="text-xs text-gray-500 mt-1">{Math.round(progressPercentage)}% del objetivo</p>
+              <Card key={campaign.id} className="overflow-hidden hover:shadow-md transition-all duration-200 border-gray-100">
+                <CardContent className="p-0">
+                  <div className="flex items-stretch">
+                    {/* Imagen con overlay de urgencia */}
+                    <div className="relative w-32 h-32 flex-shrink-0">
+                      <Image
+                        src={getSafeImageUrl(campaign.image)}
+                        alt={campaign.title}
+                        width={128}
+                        height={128}
+                        className="w-full h-full object-cover"
+                      />
+                      {campaign.urgency >= 8 && (
+                        <div className="absolute top-2 left-2">
+                          <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium animate-pulse">
+                            URGENTE
+                          </div>
+                        </div>
+                      )}
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                      <Link href={`/admin/campanas/${campaign.id}`}>
-                        <Button variant="outline" size="sm">
-                          <Eye className="h-4 w-4 mr-1" />
-                          Ver
-                        </Button>
-                      </Link>
+                    <div className="flex-1 p-4">
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 mr-3">
+                          <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1">{campaign.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <Badge className={`${getStatusColor(campaign.status)} border text-xs flex items-center gap-1 px-2 py-0.5`}>
+                              {getStatusIcon(campaign.status)}
+                              {getStatusText(campaign.status)}
+                            </Badge>
+                            <span className="text-xs text-gray-500">
+                              {getCategoryName(campaign.category)}
+                            </span>
+                          </div>
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver detalle
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Edit className="h-4 w-4 mr-2" />
+                              Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              {campaign.status === "active" ? (
+                                <>
+                                  <Pause className="h-4 w-4 mr-2" />
+                                  Pausar
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Activar
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
 
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
+                        <div className="flex items-center">
+                          <DollarSign className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+                          <span className="font-medium text-gray-900">${(campaign.raised || 0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Users className="h-3.5 w-3.5 mr-1 text-blue-600" />
+                          <span>{campaign.donors || 0}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <Calendar className="h-3.5 w-3.5 mr-1 text-amber-600" />
+                          <span>{campaign.daysLeft && campaign.daysLeft > 0 ? `${campaign.daysLeft} días` : "Finalizada"}</span>
+                        </div>
+                        <div className="flex items-center">
+                          <MapPin className="h-3.5 w-3.5 mr-1 text-gray-500" />
+                          <span className="truncate">{campaign.location}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs text-gray-500">Objetivo: ${campaign.goal.toLocaleString()}</span>
+                            <span className="text-xs font-semibold text-gray-900">{Math.round(progressPercentage)}%</span>
+                          </div>
+                          <Progress value={progressPercentage} className="h-2" />
+                        </div>
+                        <Link href={`/admin/campanas/${campaign.id}`}>
+                          <Button size="sm" variant="outline" className="hover:bg-gray-900 hover:text-white transition-colors">
+                            <Eye className="h-3.5 w-3.5 mr-1" />
+                            Ver
                           </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            {campaign.status === "active" ? (
-                              <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pausar
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Activar
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver en sitio público
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                        </Link>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                </CardContent>
+              </Card>
             )
           }
 
-          // Detailed variant - formato extendido vertical
+          // Detailed variant - formato compacto horizontal
           return (
-            <Card key={campaign.id} className="hover:shadow-md transition-shadow">
-              <CardContent className="p-6">
-                <div className="flex items-start space-x-4">
-                  <Image
-                    src={getSafeImageUrl(campaign.image)}
-                    alt={campaign.title}
-                    width={120}
-                    height={90}
-                    className="w-30 h-24 object-cover rounded"
-                  />
+            <Card key={campaign.id} className="overflow-hidden hover:shadow-md transition-all duration-200 bg-white">
+              <CardContent className="p-0">
+                <div className="flex items-center">
+                  {/* Imagen más pequeña */}
+                  <div className="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0">
+                    <Image
+                      src={getSafeImageUrl(campaign.image)}
+                      alt={campaign.title}
+                      width={128}
+                      height={128}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between mb-3">
-                      <div className="flex items-center space-x-3">
-                        <h3 className="font-semibold text-lg text-gray-900">{campaign.title}</h3>
-                        <Badge className={getStatusColor(campaign.status)}>{getStatusText(campaign.status)}</Badge>
-                        <Badge className={getUrgencyColor(campaign.urgency)}>
-                          {getUrgencyLevel(campaign.urgency)} ({campaign.urgency}/10)
-                        </Badge>
-                      </div>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
-                            <Edit className="h-4 w-4 mr-2" />
-                            Editar
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            {campaign.status === "active" ? (
-                              <>
-                                <Pause className="h-4 w-4 mr-2" />
-                                Pausar
-                              </>
-                            ) : (
-                              <>
-                                <Play className="h-4 w-4 mr-2" />
-                                Activar
-                              </>
-                            )}
-                          </DropdownMenuItem>
-                          <DropdownMenuItem>
-                            <Eye className="h-4 w-4 mr-2" />
-                            Ver en sitio público
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
+                  {/* Contenido principal */}
+                  <div className="flex-1 p-4 md:p-5">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                      {/* Columna izquierda: Título y beneficiario */}
+                      <div className="flex-1">
+                        <div className="flex items-start md:items-center gap-2 mb-2">
+                          <div>
+                            <h3 className="text-lg font-bold text-gray-900 line-clamp-1">
+                              {campaign.title}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              <span className="font-medium">{campaign.beneficiary_name}</span>
+                              {campaign.beneficiary_age && ` (${campaign.beneficiary_age} años)`}
+                              <span className="text-gray-400 mx-2">•</span>
+                              <span className="text-gray-500">{getCategoryName(campaign.category)}</span>
+                            </p>
+                          </div>
+                        </div>
 
-                    {/* Beneficiary Information */}
-                    <div className="mb-3 p-3 bg-blue-50 rounded-lg">
-                      <h4 className="font-semibold text-sm text-blue-900 mb-1">Beneficiario</h4>
-                      <p className="text-sm text-blue-800">
-                        {campaign.beneficiary_name}
-                        {campaign.beneficiary_age && ` (${campaign.beneficiary_age} años)`}
-                      </p>
-                      <p className="text-xs text-blue-700 mt-1">Categoría: {getCategoryName(campaign.category)}</p>
-                    </div>
+                        {/* Badges de estado y urgencia */}
+                        <div className="flex items-center gap-2 mb-3">
+                          <Badge className={`${getStatusColor(campaign.status)} border text-xs flex items-center gap-1 px-2 py-0.5`}>
+                            {getStatusIcon(campaign.status)}
+                            {getStatusText(campaign.status)}
+                          </Badge>
+                          {campaign.urgency >= 5 && (
+                            <Badge className={`${getUrgencyBadgeColor(campaign.urgency)} border text-xs px-2 py-0.5`}>
+                              <AlertCircle className="w-3 h-3 mr-1" />
+                              Urgencia: {getUrgencyLevel(campaign.urgency)}
+                            </Badge>
+                          )}
+                        </div>
 
-                    {/* Current Situation */}
-                    <div className="mb-3 p-3 bg-yellow-50 rounded-lg">
-                      <h4 className="font-semibold text-sm text-yellow-900 mb-1">Situación Actual</h4>
-                      <p className="text-xs text-yellow-800">{campaign.current_situation}</p>
-                      <p className="text-xs text-yellow-700 mt-1"><strong>Urgencia:</strong> {campaign.urgency_reason}</p>
-                    </div>
+                        {/* Métricas en línea */}
+                        <div className="flex items-center gap-3 text-sm mb-3">
+                          <div className="flex items-center gap-1">
+                            <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                            <span className="font-semibold text-gray-900">
+                              ${(campaign.raised || 0).toLocaleString()}
+                            </span>
+                            <span className="text-gray-500">/ ${campaign.goal.toLocaleString()}</span>
+                          </div>
+                          <span className="text-gray-300">•</span>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5 text-blue-600" />
+                            <span className="text-gray-700">{campaign.donors || 0} donantes</span>
+                          </div>
+                          <span className="text-gray-300">•</span>
+                          <div className="flex items-center gap-1">
+                            <Calendar className="h-3.5 w-3.5 text-amber-600" />
+                            <span className="text-gray-700">
+                              {campaign.daysLeft && campaign.daysLeft > 0 ? `${campaign.daysLeft} días` : "Finalizada"}
+                            </span>
+                          </div>
+                          <span className="text-gray-300">•</span>
+                          <div className="flex items-center gap-1">
+                            <MapPin className="h-3.5 w-3.5 text-gray-500" />
+                            <span className="text-gray-700">{campaign.location}</span>
+                          </div>
+                        </div>
 
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm text-gray-600 mb-4">
-                      <div className="flex items-center">
-                        <DollarSign className="h-4 w-4 mr-1" />${(campaign.raised || 0).toLocaleString()} / $
-                        {campaign.goal.toLocaleString()}
-                      </div>
-                      <div className="flex items-center">
-                        <Users className="h-4 w-4 mr-1" />
-                        {campaign.donors || 0} donantes
-                      </div>
-                      <div className="flex items-center">
-                        <Calendar className="h-4 w-4 mr-1" />
-                        {campaign.daysLeft && campaign.daysLeft > 0 ? `${campaign.daysLeft} días` : "Finalizada"}
-                      </div>
-                      <div className="flex items-center">
-                        <MapPin className="h-4 w-4 mr-1" />
-                        {campaign.location}
-                      </div>
-                      <div className="text-xs text-gray-500">Creada: {new Date(campaign.created_at).toLocaleDateString('es-AR')}</div>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1 mr-6">
-                        <Progress value={progressPercentage} className="h-2 mb-1" />
-                        <p className="text-xs text-gray-500">{Math.round(progressPercentage)}% del objetivo</p>
+                        {/* Barra de progreso */}
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1">
+                            <Progress value={progressPercentage} className="h-2" />
+                          </div>
+                          <span className="text-sm font-bold text-gray-900 min-w-[45px] text-right">
+                            {Math.round(progressPercentage)}%
+                          </span>
+                        </div>
                       </div>
 
-                      <div className="flex items-center space-x-2">
+                      {/* Columna derecha: Acciones */}
+                      <div className="flex items-center gap-2 md:ml-4">
                         <Link href={`/admin/campanas/${campaign.id}`}>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4 mr-1" />
+                          <Button size="sm" variant="outline">
+                            <Eye className="h-3.5 w-3.5 mr-1" />
                             Ver Detalle
                           </Button>
                         </Link>
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-1" />
+                        <Button size="sm" variant="outline">
+                          <Edit className="h-3.5 w-3.5 mr-1" />
                           Editar
                         </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem>
+                              {campaign.status === "active" ? (
+                                <>
+                                  <Pause className="h-4 w-4 mr-2" />
+                                  Pausar campaña
+                                </>
+                              ) : (
+                                <>
+                                  <Play className="h-4 w-4 mr-2" />
+                                  Activar campaña
+                                </>
+                              )}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem>
+                              <Eye className="h-4 w-4 mr-2" />
+                              Ver en sitio público
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </div>
                     </div>
                   </div>

@@ -1,47 +1,102 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { ArrowLeft, FileText, Download, Eye, Search, Filter, Calendar, DollarSign } from "lucide-react"
-import Image from "next/image"
-import { useState } from "react"
+import { ArrowLeft, Search, Filter, Calendar, AlertCircle } from "lucide-react"
+import { useState, useMemo } from "react"
 import Link from "next/link"
-import { receipts } from "@/lib/data/receipts"
+import { useParams } from "next/navigation"
 import { ReceiptList } from "@/components/receipts/ReceiptList"
-import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal"
+import { ReceiptDetail } from "@/components/receipts/ReceiptDetail"
+import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
+import { useCampaign } from "@/hooks/campaigns/useCampaign"
+import { Receipt } from "@/types/receipt"
 
 export default function ReceiptsPage() {
-  const [selectedReceipt, setSelectedReceipt] = useState<any>(null)
+  const params = useParams()
+  const campaignId = params.id as string
+  
+  const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [filterType, setFilterType] = useState("all")
   const [filterStatus, setFilterStatus] = useState("all")
 
+  // Fetch campaign data to get the title
+  const { campaign, isLoading: campaignLoading } = useCampaign(campaignId)
+  
+  // Fetch receipts from backend
+  const { receipts, totalSpent, isLoading: receiptsLoading, error } = useCampaignPublicReceipts(campaignId)
 
-  const filteredReceipts = receipts.filter((receipt) => {
-    const matchesSearch =
-      receipt.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      receipt.type.toLowerCase().includes(searchTerm.toLowerCase())
+  // Get unique types and statuses for filters
+  const receiptTypes = useMemo(() => {
+    const types = new Set(receipts.map(r => r.type))
+    return Array.from(types).sort()
+  }, [receipts])
 
-    const matchesType = filterType === "all" || receipt.type.toLowerCase().includes(filterType.toLowerCase())
-    const matchesStatus = filterStatus === "all" || receipt.status.toLowerCase() === filterStatus.toLowerCase()
+  const receiptStatuses = useMemo(() => {
+    const statuses = new Set(receipts.map(r => r.status))
+    return Array.from(statuses).sort()
+  }, [receipts])
 
-    return matchesSearch && matchesType && matchesStatus
-  })
+  // Filter receipts based on search and filters
+  const filteredReceipts = useMemo(() => {
+    return receipts.filter((receipt) => {
+      const matchesSearch =
+        receipt.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        receipt.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        receipt.type.toLowerCase().includes(searchTerm.toLowerCase())
 
-  const totalAmount = filteredReceipts.reduce((sum, receipt) => sum + receipt.amount, 0)
+      const matchesType = filterType === "all" || receipt.type.toLowerCase().includes(filterType.toLowerCase())
+      const matchesStatus = filterStatus === "all" || receipt.status.toLowerCase() === filterStatus.toLowerCase()
 
+      return matchesSearch && matchesType && matchesStatus
+    })
+  }, [receipts, searchTerm, filterType, filterStatus])
+
+  const filteredTotalAmount = filteredReceipts.reduce((sum, receipt) => sum + receipt.amount, 0)
+
+  // Loading state
+  if (campaignLoading || receiptsLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando comprobantes...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar comprobantes</h2>
+            <p className="text-gray-600 mb-4">No pudimos cargar los comprobantes. Por favor, intenta nuevamente.</p>
+            <Link href={`/campanas/${campaignId}`}>
+              <button className="text-blue-600 hover:text-blue-800">
+                <ArrowLeft className="h-4 w-4 inline mr-2" />
+                Volver a la campaña
+              </button>
+            </Link>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Breadcrumb y Header */}
         <div className="mb-6">
-          <Link href="/" className="flex items-center text-blue-600 hover:text-blue-800 mb-4">
+          <Link href={`/campanas/${campaignId}`} className="flex items-center text-blue-600 hover:text-blue-800 mb-4">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Volver a la campaña
           </Link>
@@ -49,11 +104,11 @@ export default function ReceiptsPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Comprobantes de Gastos</h1>
-              <p className="text-gray-600 mt-1">Ayuda a Luna - Cirugía de Emergencia</p>
+              <p className="text-gray-600 mt-1">{campaign?.title || 'Campaña'}</p>
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-500">Total gastado</p>
-              <p className="text-2xl font-bold text-green-600">${totalAmount.toLocaleString()}</p>
+              <p className="text-2xl font-bold text-green-600">${totalSpent.toLocaleString()}</p>
             </div>
           </div>
         </div>
@@ -79,11 +134,11 @@ export default function ReceiptsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los tipos</SelectItem>
-                  <SelectItem value="consulta">Consultas</SelectItem>
-                  <SelectItem value="medicamentos">Medicamentos</SelectItem>
-                  <SelectItem value="radiografías">Radiografías</SelectItem>
-                  <SelectItem value="alimento">Alimento</SelectItem>
-                  <SelectItem value="transporte">Transporte</SelectItem>
+                  {receiptTypes.map(type => (
+                    <SelectItem key={type} value={type.toLowerCase()}>
+                      {type}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -93,9 +148,11 @@ export default function ReceiptsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
-                  <SelectItem value="pagado">Pagado</SelectItem>
-                  <SelectItem value="pendiente">Pendiente</SelectItem>
-                  <SelectItem value="rechazado">Rechazado</SelectItem>
+                  {receiptStatuses.map(status => (
+                    <SelectItem key={status} value={status.toLowerCase()}>
+                      {status}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -108,45 +165,56 @@ export default function ReceiptsPage() {
         </Card>
 
         {/* Lista de Comprobantes */}
-        <div className="space-y-4">
-          {filteredReceipts.map((receipt) => (
-            <ReceiptList 
+        {filteredReceipts.length === 0 ? (
+          <Card>
+            <CardContent className="p-8 text-center">
+              <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                No se encontraron comprobantes
+              </h3>
+              <p className="text-gray-600">
+                {searchTerm || filterType !== "all" || filterStatus !== "all" 
+                  ? "Intenta ajustar los filtros de búsqueda"
+                  : "No hay comprobantes registrados para esta campaña"}
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          <ReceiptList 
             receipts={filteredReceipts}
             variant="public"
             onViewDetail={setSelectedReceipt}
-            onDownload={(receipt) => {}}
             showActions={true}
           />
-          ))}
-        </div>
+        )}
 
         {/* Resumen Total */}
-        <Card className="mt-8">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center">
-              <div>
-                <h3 className="text-lg font-semibold">Resumen de Gastos</h3>
-                <p className="text-gray-600">
-                  {filteredReceipts.length} comprobante{filteredReceipts.length !== 1 ? "s" : ""}
-                  {searchTerm || filterType !== "all" || filterStatus !== "all" ? " (filtrado)" : ""}
-                </p>
+        {filteredReceipts.length > 0 && (
+          <Card className="mt-8">
+            <CardContent className="p-6">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">Resumen de Gastos</h3>
+                  <p className="text-gray-600">
+                    {filteredReceipts.length} comprobante{filteredReceipts.length !== 1 ? "s" : ""}
+                    {searchTerm || filterType !== "all" || filterStatus !== "all" ? " (filtrado)" : ""}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-500">Total</p>
+                  <p className="text-3xl font-bold text-green-600">${filteredTotalAmount.toLocaleString()}</p>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">Total</p>
-                <p className="text-3xl font-bold text-green-600">${totalAmount.toLocaleString()}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Modal de Detalle del Comprobante */}
-        <ReceiptDetailModal
-        receipt={selectedReceipt}
-        isOpen={!!selectedReceipt}
-        onClose={() => setSelectedReceipt(null)}
-        onDownload={(receipt) => {}}
-        onViewOriginal={(receipt) => {}}
-      />
+        <ReceiptDetail
+          receipt={selectedReceipt}
+          isOpen={!!selectedReceipt}
+          onClose={() => setSelectedReceipt(null)}
+        />
       </main>
     </div>
   )

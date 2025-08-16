@@ -6,44 +6,41 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   ArrowLeft,
   Edit,
   Share2,
   Eye,
-  Plus,
   Users,
   Calendar,
   MapPin,
-  Camera,
   ExternalLink,
+  AlertCircle,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
+import { useParams } from "next/navigation"
 import { Receipt, ReceiptList } from "@/components/receipts/ReceiptList"
 import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal"
-import { campaigns, getCampaignDonations, getCampaignUpdates } from "@/lib/data/campaigns"
-import { getReceiptsByCampaign } from "@/lib/data/receipts"
+import { CampaignActivitiesTab } from "@/components/campaign/CampaignActivitiesTab"
+import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
+import { useCampaign } from "@/hooks/campaigns/useCampaign"
+import { useCampaignDonations } from "@/hooks/campaigns/useCampaignDonations"
 
 export default function AdminCampaignDetailPage() {
+  const params = useParams()
+  const campaignId = params.id as string
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
-  const [selectedUpdate, setSelectedUpdate] = useState<any>(null)
-  const [showAddUpdate, setShowAddUpdate] = useState(false)
-
-  // Datos de ejemplo
-  const campaign = campaigns[0]
-
-  const receipts = getReceiptsByCampaign(campaign.id)
-
-  const updates = getCampaignUpdates(campaign.id)
-
-  const progressPercentage = (campaign.raised / campaign.goal) * 100
+  
+  // Fetch campaign data from backend
+  const { campaign, isLoading: campaignLoading, error: campaignError } = useCampaign(campaignId)
+  const { donations, isLoading: donationsLoading } = useCampaignDonations(campaignId)
+  
+  // Fetch receipts from backend
+  const { receipts } = useCampaignPublicReceipts(campaignId)
+  
+  const progressPercentage = campaign ? (campaign.raised / campaign.goal) * 100 : 0
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -58,7 +55,48 @@ export default function AdminCampaignDetailPage() {
     }
   }
 
-  const donations = getCampaignDonations(campaign.id)
+  // Loading state
+  if (campaignLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando campaña...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Error state
+  if (campaignError || !campaign) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error al cargar la campaña</h2>
+          <p className="text-gray-600 mb-4">
+            {campaignError?.message || "No se pudo encontrar la campaña"}
+          </p>
+          <Link href="/admin">
+            <Button variant="outline">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Volver al Dashboard
+            </Button>
+          </Link>
+        </div>
+      </div>
+    )
+  }
+
+  // Format date for display
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'Fecha no disponible'
+    return new Date(dateString).toLocaleDateString('es-AR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -77,7 +115,9 @@ export default function AdminCampaignDetailPage() {
               <Badge className={getStatusColor(campaign.status)}>
                 {campaign.status === "active" ? "Activa" : campaign.status}
               </Badge>
-              <span className="text-sm text-gray-500">Creada el {campaign.createdAt}</span>
+              <span className="text-sm text-gray-500">
+                Creada el {formatDate(campaign.created_at)}
+              </span>
             </div>
           </div>
         </div>
@@ -116,60 +156,62 @@ export default function AdminCampaignDetailPage() {
             <TabsContent value="overview" className="space-y-6">
               <Card>
                 <CardContent className="p-6">
-                  {/* Galería de Imágenes */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div className="md:col-span-2">
+                  {/* Main Image */}
+                  {campaign.image && (
+                    <div className="mb-6">
                       <Image
-                        src={campaign.images?.[0] || "/placeholder.svg"}
-                        alt="Luna"
-                        width={600}
+                        src={campaign.image}
+                        alt={campaign.title}
+                        width={800}
                         height={400}
-                        className="w-full h-64 md:h-80 object-cover rounded-lg"
+                        className="w-full h-64 md:h-96 object-cover rounded-lg"
                       />
                     </div>
-                    <Image
-                      src={campaign.images?.[1] || "/placeholder.svg"}
-                      alt="Luna"
-                      width={300}
-                      height={200}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                    <Image
-                      src={campaign.images?.[2] || "/placeholder.svg"}
-                      alt="Luna"
-                      width={300}
-                      height={200}
-                      className="w-full h-32 object-cover rounded-lg"
-                    />
-                  </div>
+                  )}
 
-                  {/* Información del Animal */}
+                  {/* Información del Beneficiario */}
                   <div className="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 className="font-semibold text-lg mb-2">Sobre el Beneficiario</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-gray-500">Nombre:</span>
-                        <p className="font-medium">{campaign.animal?.name}</p>
+                        <p className="font-medium">{campaign.beneficiary_name}</p>
                       </div>
                       <div>
                         <span className="text-gray-500">Tipo:</span>
-                        <p className="font-medium">{campaign.animal?.type}</p>
+                        <p className="font-medium">{campaign.beneficiary_type}</p>
                       </div>
-                      <div>
-                        <span className="text-gray-500">Edad:</span>
-                        <p className="font-medium">{campaign.animal?.age}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Raza:</span>
-                        <p className="font-medium">{campaign.animal?.breed}</p>
-                      </div>
+                      {campaign.beneficiary_count && (
+                        <div>
+                          <span className="text-gray-500">Cantidad de beneficiarios:</span>
+                          <p className="font-medium">{campaign.beneficiary_count}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
 
                   {/* Descripción */}
                   <div>
-                    <h3 className="font-semibold text-lg mb-3">Historia del Caso</h3>
-                    <p className="text-gray-700 leading-relaxed">{campaign.description}</p>
+                    <h3 className="font-semibold text-lg mb-3">Descripción de la Campaña</h3>
+                    <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                      {campaign.description}
+                    </p>
+                  </div>
+
+                  {/* Información adicional */}
+                  <div className="mt-6 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <div>
+                      <span className="text-sm text-gray-500">Fecha de inicio:</span>
+                      <p className="font-medium">{formatDate(campaign.start_date)}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Fecha de finalización:</span>
+                      <p className="font-medium">{formatDate(campaign.end_date)}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm text-gray-500">Urgencia:</span>
+                      <p className="font-medium">{campaign.urgency}/10</p>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -179,42 +221,57 @@ export default function AdminCampaignDetailPage() {
             <TabsContent value="donations" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Lista de Donaciones ({donations.length})</CardTitle>
+                  <CardTitle>
+                    Lista de Donaciones ({donations.length})
+                    {donationsLoading && (
+                      <span className="ml-2 text-sm text-gray-500">Cargando...</span>
+                    )}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-4">
-                    {donations.map((donation) => (
-                      <div key={donation.id} className="flex items-start space-x-4 p-4 border rounded-lg">
-                        <Avatar>
-                          <AvatarFallback>{donation.donorName[0]}</AvatarFallback>
-                        </Avatar>
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between mb-2">
-                            <div>
-                              <h4 className="font-medium">{donation.donorName}</h4>
-                              <p className="text-sm text-gray-500">ID: {donation.transactionId}</p>
+                  {donations.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500">
+                      <p>No hay donaciones registradas aún</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {donations.map((donation) => (
+                        <div key={donation.id} className="flex items-start space-x-4 p-4 border rounded-lg">
+                          <Avatar>
+                            <AvatarFallback>{donation.donorName[0]}</AvatarFallback>
+                          </Avatar>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-2">
+                              <div>
+                                <h4 className="font-medium">{donation.donorName}</h4>
+                                <p className="text-sm text-gray-500">ID: {donation.transactionId}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-bold text-green-600">${donation.amount.toLocaleString()}</p>
+                                <p className="text-sm text-gray-500">
+                                  {new Date(donation.date).toLocaleDateString('es-AR')}
+                                </p>
+                              </div>
                             </div>
-                            <div className="text-right">
-                              <p className="font-bold text-green-600">${donation.amount.toLocaleString()}</p>
-                              <p className="text-sm text-gray-500">{donation.date}</p>
+                            <div className="flex items-center justify-between">
+                              <Badge variant={donation.status === "completed" ? "default" : "secondary"}>
+                                {donation.status === "completed" ? "Completada" : "Pendiente"}
+                              </Badge>
+                              <Button variant="outline" size="sm">
+                                <Eye className="h-4 w-4 mr-1" />
+                                Ver Detalle
+                              </Button>
                             </div>
+                            {donation.message && (
+                              <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded mt-2">
+                                {donation.message}
+                              </p>
+                            )}
                           </div>
-                          <div className="flex items-center justify-between">
-                            <Badge variant={donation.status === "completed" ? "default" : "secondary"}>
-                              {donation.status === "completed" ? "Completada" : "Pendiente"}
-                            </Badge>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver Detalle
-                            </Button>
-                          </div>
-                          {donation.message && (
-                            <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded mt-2">{donation.message}</p>
-                          )}
                         </div>
-                      </div>
-                    ))}
-                  </div>
+                      ))}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -231,116 +288,7 @@ export default function AdminCampaignDetailPage() {
 
             {/* Tab: Actividades */}
             <TabsContent value="updates" className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <div className="flex justify-between items-center">
-                    <CardTitle>Actividades y Actualizaciones</CardTitle>
-                    <Dialog open={showAddUpdate} onOpenChange={setShowAddUpdate}>
-                      <DialogTrigger asChild>
-                        <Button>
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nueva Actividad
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-2xl">
-                        <DialogHeader>
-                          <DialogTitle>Nueva Actividad</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <Label htmlFor="update-type">Tipo de Actividad</Label>
-                              <Select>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Seleccionar tipo" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  <SelectItem value="medical">Médica</SelectItem>
-                                  <SelectItem value="update">Actualización</SelectItem>
-                                  <SelectItem value="expense">Gasto</SelectItem>
-                                  <SelectItem value="milestone">Hito</SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </div>
-                            <div>
-                              <Label htmlFor="update-author">Autor</Label>
-                              <Input id="update-author" placeholder="Nombre del autor" />
-                            </div>
-                          </div>
-                          <div>
-                            <Label htmlFor="update-title">Título</Label>
-                            <Input id="update-title" placeholder="Título de la actividad" />
-                          </div>
-                          <div>
-                            <Label htmlFor="update-content">Contenido</Label>
-                            <Textarea id="update-content" rows={4} placeholder="Describe la actividad..." />
-                          </div>
-                          <div>
-                            <Label>Imágenes (Opcional)</Label>
-                            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-                              <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                              <p className="text-sm text-gray-600">
-                                Arrastra las imágenes aquí o haz clic para seleccionar
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex justify-end space-x-2">
-                            <Button variant="outline" onClick={() => setShowAddUpdate(false)}>
-                              Cancelar
-                            </Button>
-                            <Button onClick={() => setShowAddUpdate(false)}>Publicar Actividad</Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-6">
-                    {updates.map((update) => (
-                      <div key={update.id} className="border-l-4 border-blue-200 pl-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center space-x-2">
-                            <Badge variant="secondary">{update.type}</Badge>
-                            <span className="text-sm text-gray-500">
-                              {update.date} - {update.time}
-                            </span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge variant={update.published ? "default" : "secondary"}>
-                              {update.published ? "Publicado" : "Borrador"}
-                            </Badge>
-                            <Button variant="ghost" size="sm">
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setSelectedUpdate(update)}>
-                              <Eye className="h-4 w-4 mr-1" />
-                              Ver Detalle
-                            </Button>
-                          </div>
-                        </div>
-                        <h4 className="font-semibold mb-2">{update.title}</h4>
-                        <p className="text-gray-700 mb-3">{update.content}</p>
-                        {update.images && (
-                          <div className="flex space-x-2 mb-2">
-                            {update.images.map((img, idx) => (
-                              <Image
-                                key={idx}
-                                src={img || "/placeholder.svg"}
-                                alt="Actualización"
-                                width={100}
-                                height={80}
-                                className="w-20 h-16 object-cover rounded"
-                              />
-                            ))}
-                          </div>
-                        )}
-                        <p className="text-sm text-gray-500">Por: {update.author}</p>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <CampaignActivitiesTab campaignId={campaign.id} />
             </TabsContent>
 
             {/* Tab: Configuración */}
@@ -389,11 +337,17 @@ export default function AdminCampaignDetailPage() {
               {/* Progreso de Donación */}
               <div className="mb-6">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="text-2xl font-bold text-green-600">${campaign.raised.toLocaleString()}</span>
-                  <span className="text-sm text-gray-500">de ${campaign.goal.toLocaleString()}</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    ${campaign.raised.toLocaleString()}
+                  </span>
+                  <span className="text-sm text-gray-500">
+                    de ${campaign.goal.toLocaleString()}
+                  </span>
                 </div>
                 <Progress value={progressPercentage} className="h-3 mb-2" />
-                <p className="text-sm text-gray-600">{Math.round(progressPercentage)}% del objetivo alcanzado</p>
+                <p className="text-sm text-gray-600">
+                  {Math.round(progressPercentage)}% del objetivo alcanzado
+                </p>
               </div>
 
               {/* Estadísticas */}
@@ -415,29 +369,33 @@ export default function AdminCampaignDetailPage() {
               </div>
 
               {/* Información del Organizador */}
-              <div className="border-t pt-4">
-                <h4 className="font-semibold mb-3">Organizado por</h4>
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    <AvatarImage src={campaign.organizer.avatar || "/placeholder.svg"} />
-                    <AvatarFallback>FP</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-1">
-                      <span className="font-medium text-sm">{campaign.organizer.name}</span>
-                      {campaign.organizer.verified && (
-                        <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                          Verificado
-                        </Badge>
-                      )}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-500 mt-1">
-                      <MapPin className="h-3 w-3 mr-1" />
-                      {campaign.location}
+              {campaign.organizer && (
+                <div className="border-t pt-4">
+                  <h4 className="font-semibold mb-3">Organizado por</h4>
+                  <div className="flex items-center space-x-3">
+                    <Avatar>
+                      <AvatarImage src={campaign.organizer.avatar || "/placeholder.svg"} />
+                      <AvatarFallback>
+                        {campaign.organizer.name.slice(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-1">
+                        <span className="font-medium text-sm">{campaign.organizer.name}</span>
+                        {campaign.organizer.verified && (
+                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                            Verificado
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center text-xs text-gray-500 mt-1">
+                        <MapPin className="h-3 w-3 mr-1" />
+                        {campaign.location}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
             </CardContent>
           </Card>
 
@@ -455,7 +413,7 @@ export default function AdminCampaignDetailPage() {
                 <Share2 className="h-4 w-4 mr-2" />
                 Compartir Campaña
               </Button>
-              <Link href={`/campana/${campaign.id}`}>
+              <Link href={`/campanas/${campaign.id}`}>
                 <Button className="w-full" variant="outline">
                   <ExternalLink className="h-4 w-4 mr-2" />
                   Ver en Sitio Público
@@ -465,78 +423,15 @@ export default function AdminCampaignDetailPage() {
           </Card>
         </div>
       </div>
+      
       {/* Modal de Detalle del Comprobante */}
       <ReceiptDetailModal
         receipt={selectedReceipt}
         isOpen={!!selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
-        onDownload={(receipt) => {/* lógica download */}}
-        onViewOriginal={(receipt) => {/* lógica view original */}}
+        onDownload={() => {/* lógica download */}}
+        onViewOriginal={() => {/* lógica view original */}}
       />
-
-      {/* Modal de Detalle de Actividad */}
-      {selectedUpdate && (
-        <Dialog open={!!selectedUpdate} onOpenChange={() => setSelectedUpdate(null)}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary">{selectedUpdate.type}</Badge>
-                  <span className="text-sm text-gray-500">
-                    {selectedUpdate.date} - {selectedUpdate.time}
-                  </span>
-                </div>
-                <Badge variant={selectedUpdate.published ? "default" : "secondary"}>
-                  {selectedUpdate.published ? "Publicado" : "Borrador"}
-                </Badge>
-              </div>
-              <DialogTitle className="text-xl">{selectedUpdate.title}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-6">
-              {/* Contenido completo */}
-              <div>
-                <p className="text-gray-700 leading-relaxed">{selectedUpdate.content}</p>
-              </div>
-
-              {/* Imágenes */}
-              {selectedUpdate.images && selectedUpdate.images.length > 0 && (
-                <div>
-                  <h4 className="font-semibold mb-3">Imágenes</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedUpdate.images.map((img: string, idx: number) => (
-                      <Image
-                        key={idx}
-                        src={img || "/placeholder.svg"}
-                        alt={`Imagen ${idx + 1}`}
-                        width={400}
-                        height={300}
-                        className="w-full h-48 object-cover rounded-lg"
-                      />
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Información adicional */}
-              <div className="border-t pt-4">
-                <div className="flex items-center justify-between text-sm text-gray-500">
-                  <span>Publicado por: {selectedUpdate.author}</span>
-                </div>
-              </div>
-
-              {/* Acciones */}
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button variant="outline">
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar Actividad
-                </Button>
-                {!selectedUpdate.published && <Button>Publicar Ahora</Button>}
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
     </div>
   )
 }

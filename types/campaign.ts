@@ -9,7 +9,7 @@ export interface Campaign {
   daysLeft?: number
   location: string
   category: string // UUID from backend
-  urgency: number // 1-10 scale from backend
+  urgency: string // 1-10 scale from backend
   organizer?: Organizer
   status: CampaignStatus
   animal?: Animal
@@ -48,26 +48,14 @@ export interface CampaignFilters {
   status?: string
 }
 
-export interface CampaignUpdate {
-  id: number
-  date: string
-  time: string
-  type: 'medical' | 'expense' | 'general'
+export interface CampaignActivity {
+  id: string
+  campaign_id: string
   title: string
-  content: string
-  fullContent: string
-  images?: string[]
-  documents?: string[]
+  description: string
+  date: string
+  type: string
   author: string
-  location: string
-  expense?: {
-    total: number
-    breakdown: Array<{
-      item: string
-      amount: number
-    }>
-  }
-  published: boolean
 }
 
 export interface CampaignComment {

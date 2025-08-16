@@ -26,6 +26,7 @@ export interface FormBuilderProps {
   submitLabel?: string
   cancelLabel?: string
   isLoading?: boolean
+  onChange?: (data: Record<string, unknown>) => void
 }
 
 export function FormBuilder({
@@ -35,12 +36,15 @@ export function FormBuilder({
   onCancel,
   submitLabel = "Guardar",
   cancelLabel = "Cancelar",
-  isLoading = false
+  isLoading = false,
+  onChange
 }: FormBuilderProps) {
   const [formData, setFormData] = useState<Record<string, any>>({})
 
   const handleInputChange = (name: string, value: any) => {
-    setFormData(prev => ({ ...prev, [name]: value }))
+    const newData = { ...formData, [name]: value }
+    setFormData(newData)
+    onChange?.(newData)
   }
 
   const handleSubmit = (e: React.FormEvent) => {

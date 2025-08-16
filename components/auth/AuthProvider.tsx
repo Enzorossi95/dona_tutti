@@ -28,11 +28,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const refreshToken = useCallback(async () => {
     try {
       const refreshTokenValue = tokenStorage.getRefreshToken();
+      const currentAccessToken = tokenStorage.getAccessToken();
+      
       if (!refreshTokenValue) {
         throw new Error('No refresh token available');
       }
 
-      const response = await authApi.refreshToken(refreshTokenValue);
+      // Pass current access token (even if expired) for authorization
+      const response = await authApi.refreshToken(refreshTokenValue, currentAccessToken || undefined);
       
       // Update only access token
       const currentTokens = {
@@ -72,16 +75,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const initializeAuth = async () => {
       try {
         const accessToken = tokenStorage.getAccessToken();
+        const refreshTokenValue = tokenStorage.getRefreshToken();
         
-        if (!accessToken || tokenStorage.isTokenExpired()) {
-          // Try to refresh token
-          const refreshTokenValue = tokenStorage.getRefreshToken();
-          if (refreshTokenValue) {
-            await refreshToken();
-            return;
-          }
-          
-          // No valid tokens, user is not authenticated
+        // No tokens at all - user is not authenticated (guest user)
+        if (!accessToken && !refreshTokenValue) {
           setState(prev => ({
             ...prev,
             isLoading: false,
@@ -90,20 +87,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }));
           return;
         }
-
-        // Get current user with existing token
-        const userData = await authApi.getCurrentUser(accessToken);
-        setState(prev => ({
-          ...prev,
-          user: userData,
-          isAuthenticated: true,
-          isLoading: false,
-          error: null
-        }));
+        
+        // If token is expired but we have a refresh token, DON'T automatically refresh
+        // Let the user action trigger the refresh (when accessing protected routes)
+        if (tokenStorage.isTokenExpired() && refreshTokenValue) {
+          console.log('Token expired, will refresh on next authenticated request');
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isAuthenticated: false,
+            user: null
+          }));
+          return;
+        }
+        
+        // Token exists and is not expired - validate it
+        if (accessToken && !tokenStorage.isTokenExpired()) {
+          try {
+            const userData = await authApi.getCurrentUser(accessToken);
+            setState(prev => ({
+              ...prev,
+              user: userData,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null
+            }));
+          } catch (error) {
+            // Token is invalid, clear it
+            console.error('Token validation failed:', error);
+            tokenStorage.clearTokens();
+            setState(prev => ({
+              ...prev,
+              isLoading: false,
+              isAuthenticated: false,
+              user: null
+            }));
+          }
+        } else {
+          // Shouldn't reach here, but handle as unauthenticated
+          setState(prev => ({
+            ...prev,
+            isLoading: false,
+            isAuthenticated: false,
+            user: null
+          }));
+        }
 
       } catch (error) {
         console.error('Auth initialization failed:', error);
-        tokenStorage.clearTokens();
         setState(prev => ({
           ...prev,
           isLoading: false,
@@ -115,7 +146,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     };
 
     initializeAuth();
-  }, [refreshToken]);
+  }, []);
 
   const login = useCallback(async (credentials: LoginRequest) => {
     try {

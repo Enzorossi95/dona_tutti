@@ -12,9 +12,12 @@ export const authenticatedFetcher = async (url: string) => {
   // Check if token is expired and try to refresh
   if (tokenStorage.isTokenExpired()) {
     const refreshToken = tokenStorage.getRefreshToken();
+    const currentAccessToken = tokenStorage.getAccessToken(); // Get current token even if expired
+    
     if (refreshToken) {
       try {
-        const response = await authApi.refreshToken(refreshToken);
+        // Pass current access token for authorization header
+        const response = await authApi.refreshToken(refreshToken, currentAccessToken || undefined);
         const newTokens = {
           accessToken: response.accessToken,
           refreshToken: refreshToken,
@@ -52,9 +55,12 @@ export const authenticatedFetcher = async (url: string) => {
     if (response.status === 401) {
       // Token is invalid, try to refresh once more
       const refreshToken = tokenStorage.getRefreshToken();
+      const expiredAccessToken = tokenStorage.getAccessToken(); // Get the expired token
+      
       if (refreshToken) {
         try {
-          const refreshResponse = await authApi.refreshToken(refreshToken);
+          // Pass expired access token for authorization header
+          const refreshResponse = await authApi.refreshToken(refreshToken, expiredAccessToken || undefined);
           const newTokens = {
             accessToken: refreshResponse.accessToken,
             refreshToken: refreshToken,

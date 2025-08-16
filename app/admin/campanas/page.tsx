@@ -8,11 +8,11 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { AdminRoute } from "@/components/auth/ProtectedRoute"
-import { useCampaigns } from "@/hooks/api/campaigns/useCampaigns"
+import { useCampaigns } from "@/hooks/campaigns/useCampaigns"
 import { CampaignAdminList } from "@/components/campaign/CampaignAdminList"
 
 export default function AdminCampaignsPage() {
-  const { campaigns, isLoading, error, refetch } = useCampaigns()
+  const { allCampaigns: campaigns, isLoading, error, mutate: refetch } = useCampaigns()
 
 
   return (

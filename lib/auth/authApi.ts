@@ -60,9 +60,9 @@ export const authApi = {
   // Login user
   login: async (credentials: LoginRequest): Promise<LoginResponse> => {
     try {
-      console.log('Attempting login to:', `${API_BASE_URL}/auth/login`);
+      console.log('Attempting login to:', `${API_BASE_URL}/api/auth/login`);
       
-      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -227,12 +227,19 @@ export const authApi = {
   },
 
   // Refresh token
-  refreshToken: async (refreshToken: string): Promise<RefreshTokenResponse> => {
+  refreshToken: async (refreshToken: string, accessToken?: string): Promise<RefreshTokenResponse> => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+    };
+    
+    // Include Authorization header if access token is provided
+    if (accessToken) {
+      headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+    
     const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers,
       body: JSON.stringify({ refreshToken }),
     });
 
@@ -242,9 +249,9 @@ export const authApi = {
   // Get current user
   getCurrentUser: async (accessToken: string) => {
     try {
-      console.log('Fetching current user from:', `${API_BASE_URL}/users/me`);
+      console.log('Fetching current user from:', `${API_BASE_URL}/api/users/me`);
       
-      const response = await fetch(`${API_BASE_URL}/users/me`, {
+      const response = await fetch(`${API_BASE_URL}/api/users/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${accessToken}`,

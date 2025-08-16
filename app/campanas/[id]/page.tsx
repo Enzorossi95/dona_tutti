@@ -11,8 +11,9 @@ import Image from "next/image"
 import { useState } from "react"
 import Link from "next/link"
 import { useParams } from "next/navigation"
-import { getCampaignById, getCampaignUpdates } from "@/lib/data/campaigns"
-import { getReceiptsByCampaign, getTotalSpentByCampaign } from "@/lib/data/receipts"
+import { useCampaign } from "@/hooks/campaigns/useCampaign"
+import { useCampaignActivities } from "@/hooks/campaigns/useCampaignActivities"
+import { useCampaignReceipts } from "@/hooks/campaigns/useCampaignReceipts"
 import { formatCurrency, formatPercentage } from "@/lib/utils/formatters"
 import EmptyState from "@/components/shared/EmptyState"
 
@@ -22,18 +23,40 @@ export default function CampaignPage() {
   
   const [selectedUpdate, setSelectedUpdate] = useState<any>(null)
 
-  // Obtener datos dinámicos basados en el ID
-  const campaign = getCampaignById(campaignId)
-  const updates = getCampaignUpdates(campaignId)
-  const receipts = getReceiptsByCampaign(campaignId)
-  const totalSpent = getTotalSpentByCampaign(campaignId)
+  // Fetch data from backend
+  const { campaign, isLoading: campaignLoading, error: campaignError } = useCampaign(campaignId)
+  const { activities, isLoading: activitiesLoading } = useCampaignActivities(campaignId)
+  const { receipts, totalSpent } = useCampaignReceipts(campaignId)
 
-  // Manejar caso de campaña no encontrada
-  if (!campaign) {
-    return <EmptyState title="Campaña no encontrada" description="La campaña que buscas no existe o ha sido eliminada." />
+  // Loading state
+  if (campaignLoading || activitiesLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-500 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Cargando campaña...</p>
+          </div>
+        </div>
+      </div>
+    )
   }
 
-  const progressPercentage = formatPercentage(campaign.raised, campaign.goal)
+  // Error state or campaign not found
+  if (campaignError || !campaign) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex items-center justify-center min-h-[400px]">
+          <EmptyState 
+            title="Campaña no encontrada" 
+            description={campaignError?.message || "La campaña que buscas no existe o ha sido eliminada."} 
+          />
+        </div>
+      </div>
+    )
+  }
+
+  const progressPercentage = campaign ? formatPercentage(campaign.raised, campaign.goal) : 0
 
   const getUpdateIcon = (type: string) => {
     switch (type) {
@@ -83,7 +106,7 @@ export default function CampaignPage() {
                   <div className="md:col-span-2">
                     <Image
                       src={campaign.image || "/placeholder.svg"}
-                      alt={campaign.animal?.name || "Animal"}
+                      alt={campaign.title || "Campaña"}
                       width={600}
                       height={400}
                       className="w-full h-64 md:h-80 object-cover rounded-lg"
@@ -91,27 +114,25 @@ export default function CampaignPage() {
                   </div>
                 </div>
 
-                {/* Información del Animal */}
-                {campaign.animal && (
+                {/* Información del Beneficiario */}
+                {campaign.beneficiary_name && (
                   <div className="bg-gray-50 rounded-lg p-4 mb-6">
                     <h3 className="font-semibold text-lg mb-2">Sobre el Beneficiario</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-gray-500">Nombre:</span>
-                        <p className="font-medium">{campaign.animal.name}</p>
+                        <p className="font-medium">{campaign.beneficiary_name}</p>
                       </div>
                       <div>
-                        <span className="text-gray-500">Categoría:</span>
-                        <p className="font-medium">{campaign.animal.type}</p>
+                        <span className="text-gray-500">Tipo:</span>
+                        <p className="font-medium">{campaign.beneficiary_type || "Animal"}</p>
                       </div>
-                      <div>
-                        <span className="text-gray-500">Edad:</span>
-                        <p className="font-medium">{campaign.animal.age}</p>
-                      </div>
-                      <div>
-                        <span className="text-gray-500">Situación:</span>
-                        <p className="font-medium">Rescatada de la calle</p>
-                      </div>
+                      {campaign.beneficiary_count && (
+                        <div>
+                          <span className="text-gray-500">Cantidad:</span>
+                          <p className="font-medium">{campaign.beneficiary_count}</p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -133,7 +154,13 @@ export default function CampaignPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {updates.map((update) => (
+                {activities.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <MessageCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p>No hay actualizaciones disponibles aún</p>
+                  </div>
+                ) : (
+                  activities.map((update) => (
                   <div key={update.id} className="border-l-4 border-blue-200 pl-4">
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center space-x-2">
@@ -142,7 +169,7 @@ export default function CampaignPage() {
                           <span className="ml-1 capitalize">{update.type}</span>
                         </Badge>
                         <span className="text-sm text-gray-500">
-                          {update.date} - {update.time}
+                          {new Date(update.date).toLocaleDateString('es-AR')} - {new Date(update.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <Button
@@ -161,33 +188,11 @@ export default function CampaignPage() {
                     >
                       {update.title}
                     </h4>
-                    <p className="text-gray-700 mb-3">{update.content}</p>
-                    {update.images && (
-                      <div className="flex space-x-2 mb-2">
-                        {update.images.slice(0, 2).map((img, idx) => (
-                          <Image
-                            key={idx}
-                            src={img || "/placeholder.svg"}
-                            alt="Actualización"
-                            width={150}
-                            height={100}
-                            className="w-24 h-16 object-cover rounded cursor-pointer hover:opacity-80"
-                            onClick={() => setSelectedUpdate(update)}
-                          />
-                        ))}
-                        {update.images.length > 2 && (
-                          <div
-                            className="w-24 h-16 bg-gray-200 rounded flex items-center justify-center cursor-pointer hover:bg-gray-300"
-                            onClick={() => setSelectedUpdate(update)}
-                          >
-                            <span className="text-sm text-gray-600">+{update.images.length - 2}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    <p className="text-gray-700 mb-3">{update.description}</p>
                     <p className="text-sm text-gray-500">Por: {update.author}</p>
                   </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
 
@@ -261,13 +266,13 @@ export default function CampaignPage() {
                   <h4 className="font-semibold mb-3">Organizado por</h4>
                   <div className="flex items-center space-x-3">
                     <Avatar>
-                      <AvatarImage src={campaign.organizer.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>FP</AvatarFallback>
+                      <AvatarImage src={campaign.organizer?.avatar || "/placeholder.svg"} />
+                      <AvatarFallback>{campaign.organizer?.name?.[0] || "O"}</AvatarFallback>
                     </Avatar>
                     <div className="flex-1">
                       <div className="flex items-center space-x-1">
-                        <span className="font-medium text-sm">{campaign.organizer.name}</span>
-                        {campaign.organizer.verified && (
+                        <span className="font-medium text-sm">{campaign.organizer?.name || "Organizador"}</span>
+                        {campaign.organizer?.verified && (
                           <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
                             Verificado
                           </Badge>
@@ -333,7 +338,7 @@ export default function CampaignPage() {
                       <span className="ml-1 capitalize">{selectedUpdate.type}</span>
                     </Badge>
                     <span className="text-sm text-gray-500">
-                      {selectedUpdate.date} - {selectedUpdate.time}
+                      {new Date(selectedUpdate.date).toLocaleDateString('es-AR')} - {new Date(selectedUpdate.date).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
                 </div>
@@ -343,63 +348,9 @@ export default function CampaignPage() {
               <div className="space-y-6">
                 {/* Contenido completo */}
                 <div>
-                  <p className="text-gray-700 leading-relaxed">{selectedUpdate.fullContent}</p>
+                  <p className="text-gray-700 leading-relaxed">{selectedUpdate.description}</p>
                 </div>
 
-                {/* Imágenes */}
-                {selectedUpdate.images && selectedUpdate.images.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-3">Imágenes</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedUpdate.images.map((img: string, idx: number) => (
-                        <Image
-                          key={idx}
-                          src={img || "/placeholder.svg"}
-                          alt={`Imagen ${idx + 1}`}
-                          width={400}
-                          height={300}
-                          className="w-full h-48 object-cover rounded-lg"
-                        />
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Desglose de gastos (solo para tipo expense) */}
-                {selectedUpdate.type === "expense" && selectedUpdate.expense && (
-                  <div>
-                    <h4 className="font-semibold mb-3">Desglose de Gastos</h4>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="space-y-2">
-                        {selectedUpdate.expense.breakdown.map((item: any, idx: number) => (
-                          <div key={idx} className="flex justify-between text-sm">
-                            <span>{item.item}</span>
-                            <span className="font-medium">${item.amount.toLocaleString()}</span>
-                          </div>
-                        ))}
-                        <div className="border-t pt-2 flex justify-between font-semibold">
-                          <span>Total</span>
-                          <span>${selectedUpdate.expense.total.toLocaleString()}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Documentos */}
-                {selectedUpdate.documents && selectedUpdate.documents.length > 0 && (
-                  <div>
-                    <h4 className="font-semibold mb-3">Documentos</h4>
-                    <div className="space-y-2">
-                      {selectedUpdate.documents.map((doc: string, idx: number) => (
-                        <div key={idx} className="flex items-center space-x-2 p-2 bg-gray-50 rounded">
-                          <FileText className="h-4 w-4 text-gray-500" />
-                          <span className="text-sm text-blue-600 hover:underline cursor-pointer">{doc}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 {/* Información adicional */}
                 <div className="border-t pt-4">
