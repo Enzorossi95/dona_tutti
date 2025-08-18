@@ -86,15 +86,36 @@ export function FormBuilder({
 
       case 'file':
         return (
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
-            {field.name.includes('image') ? (
-              <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            ) : (
-              <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-            )}
-            <p className="text-sm text-gray-600">
-              {field.placeholder || "Arrastra archivos aquí o haz clic para seleccionar"}
-            </p>
+          <div className="space-y-2">
+            <input
+              id={field.name}
+              type="file"
+              accept="image/*,application/pdf"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                handleInputChange(field.name, file)
+              }}
+              required={field.required}
+            />
+            <label
+              htmlFor={field.name}
+              className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors block"
+            >
+              {field.name.includes('image') ? (
+                <Camera className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              ) : (
+                <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+              )}
+              <p className="text-sm text-gray-600">
+                {field.placeholder || "Arrastra archivos aquí o haz clic para seleccionar"}
+              </p>
+              {value && (
+                <p className="text-xs text-blue-600 mt-2">
+                  Archivo seleccionado: {value.name}
+                </p>
+              )}
+            </label>
           </div>
         )
 

@@ -579,6 +579,8 @@ Response: 200 OK
 ```
 
 #### Create Donation (Admin Only)
+
+**Opción 1: Con donor_id existente (retrocompatibilidad)**
 ```http
 POST /api/campaigns/{campaignId}/donations
 Authorization: Bearer {token}
@@ -605,6 +607,76 @@ Response: 201 Created
   "status": "pending"
 }
 ```
+
+**Opción 2: Con información de donor (get_or_create)**
+```http
+POST /api/campaigns/{campaignId}/donations
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 500.00,
+  "donor": {
+    "name": "María",
+    "last_name": "González", 
+    "email": "maria@email.com",
+    "phone": "+5491234567890"
+  },
+  "message": "Donación con información de donor",
+  "is_anonymous": false,
+  "payment_method_id": 1
+}
+
+Response: 201 Created
+{
+  "id": "new-donation-uuid",
+  "campaign_id": "campaign-uuid",
+  "amount": 500.00,
+  "date": "2024-06-01T12:00:00Z",
+  "donor_id": "created-or-found-donor-uuid",
+  "message": "Donación con información de donor",
+  "is_anonymous": false,
+  "payment_method_id": 1,
+  "status": "pending"
+}
+```
+
+**Opción 3: Solo con nombre y apellido (crear nuevo donor)**
+```http
+POST /api/campaigns/{campaignId}/donations
+Authorization: Bearer {token}
+Content-Type: application/json
+
+{
+  "amount": 300.00,
+  "donor": {
+    "name": "Carlos",
+    "last_name": "Rodríguez"
+  },
+  "message": "Donación anónima",
+  "is_anonymous": true,
+  "payment_method_id": 2
+}
+
+Response: 201 Created
+{
+  "id": "new-donation-uuid",
+  "campaign_id": "campaign-uuid", 
+  "amount": 300.00,
+  "date": "2024-06-01T12:00:00Z",
+  "donor_id": "new-donor-uuid",
+  "message": "Donación anónima",
+  "is_anonymous": true,
+  "payment_method_id": 2,
+  "status": "pending"
+}
+```
+
+**Validaciones:**
+- Debe incluir `donor_id` O `donor`, pero no ambos
+- En `donor`: `name` y `last_name` son requeridos, `email` y `phone` opcionales
+- Si se proporciona email/phone, se busca donor existente antes de crear uno nuevo
+- Búsqueda por email tiene prioridad sobre búsqueda por phone
 
 #### Update Donation (Admin Only)
 ```http

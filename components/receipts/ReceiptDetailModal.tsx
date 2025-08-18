@@ -40,13 +40,16 @@ export function ReceiptDetailModal({
           <div className="flex items-center justify-between">
             <div>
               <DialogTitle className="text-xl">{receipt.type}</DialogTitle>
-              <p className="text-gray-600 mt-1">{receipt.description}</p>
+              <p className="text-gray-800 font-bold font-lg mt-1">{receipt.name}</p>
             </div>
-            <Badge className={getStatusColor(receipt.status)}>{receipt.status}</Badge>
           </div>
         </DialogHeader>
 
         <div className="space-y-6">
+          <div>
+            <span className="text-gray-800 font-medium">Descripción:</span>
+            <p className="text-gray-700 mt-1 ">{receipt.description}</p>
+          </div>
           {/* Información General */}
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
@@ -55,19 +58,24 @@ export function ReceiptDetailModal({
             </div>
             <div>
               <span className="text-gray-500">Proveedor:</span>
-              <p className="font-medium">{receipt.vendor}</p>
+              <p className="font-medium">{receipt.provider}</p>
             </div>
-            <div>
+            {/*<div>
               <span className="text-gray-500">Documento:</span>
               <p className="font-medium text-blue-600">{receipt.document}</p>
-            </div>
+            </div>*/}
             <div>
               <span className="text-gray-500">Total:</span>
-              <p className="font-bold text-green-600 text-lg">${receipt.amount.toLocaleString()}</p>
+              <p className="font-bold text-green-600 text-lg">${receipt.total ? receipt.total.toLocaleString() : 0}</p>
+            </div>
+            <div>
+              <span className="text-gray-500">Cantidad:</span>
+              <p className="font-medium">{receipt.quantity}</p>
             </div>
           </div>
 
           {/* Imagen del Comprobante */}
+          {/*
           <div>
             <h4 className="font-semibold mb-3">Comprobante</h4>
             <Image
@@ -78,9 +86,10 @@ export function ReceiptDetailModal({
               className="w-full max-w-md h-auto object-cover rounded-lg border mx-auto"
             />
           </div>
+          */}
 
           {/* Desglose Detallado */}
-          {receipt.breakdown && (
+          {/*receipt.breakdown && (
             <div>
               <h4 className="font-semibold mb-3">Desglose Detallado</h4>
               <div className="bg-gray-50 rounded-lg p-4">
@@ -96,24 +105,25 @@ export function ReceiptDetailModal({
                   ))}
                   <div className="flex justify-between items-center pt-3 border-t-2 border-gray-300 font-bold text-lg">
                     <span>Total</span>
-                    <span className="text-green-600">${receipt.amount.toLocaleString()}</span>
+                    <span className="text-green-600">${receipt.amount ? receipt.amount.toLocaleString() : 0}</span>
                   </div>
                 </div>
               </div>
             </div>
-          )}
+          )}*/}
 
           {/* Notas Adicionales */}
-          {receipt.notes && (
+          {receipt.note && (
             <div>
-              <h4 className="font-semibold mb-3">Notas</h4>
+              <h4 className="font-gray-500">Notas Adicionales:</h4>
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <p className="text-blue-800 text-sm">{receipt.notes}</p>
+                <p className="text-black-800 text-sm ">{receipt.note}</p>
               </div>
             </div>
           )}
 
           {/* Acciones */}
+          {/*
           <div className="flex justify-end space-x-3 pt-4 border-t">
             <Button variant="outline" onClick={() => onDownload?.(receipt)}>
               <Download className="h-4 w-4 mr-2" />
@@ -124,6 +134,7 @@ export function ReceiptDetailModal({
               Ver Original
             </Button>
           </div>
+          */}
         </div>
       </DialogContent>
     </Dialog>

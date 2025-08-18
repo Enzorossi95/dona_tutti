@@ -34,27 +34,27 @@ export default function ReceiptsPage() {
     return Array.from(types).sort()
   }, [receipts])
 
-  const receiptStatuses = useMemo(() => {
-    const statuses = new Set(receipts.map(r => r.status))
-    return Array.from(statuses).sort()
-  }, [receipts])
+  //const receiptStatuses = useMemo(() => {
+  //  const statuses = new Set(receipts.map(r => r.status))
+  //  return Array.from(statuses).sort()
+  //}, [receipts])
 
   // Filter receipts based on search and filters
   const filteredReceipts = useMemo(() => {
     return receipts.filter((receipt) => {
       const matchesSearch =
         receipt.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        receipt.vendor.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        receipt.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
         receipt.type.toLowerCase().includes(searchTerm.toLowerCase())
 
       const matchesType = filterType === "all" || receipt.type.toLowerCase().includes(filterType.toLowerCase())
-      const matchesStatus = filterStatus === "all" || receipt.status.toLowerCase() === filterStatus.toLowerCase()
+      //const matchesStatus = filterStatus === "all" || receipt.status.toLowerCase() === filterStatus.toLowerCase()
 
-      return matchesSearch && matchesType && matchesStatus
+      return matchesSearch && matchesType //&& matchesStatus
     })
   }, [receipts, searchTerm, filterType, filterStatus])
 
-  const filteredTotalAmount = filteredReceipts.reduce((sum, receipt) => sum + receipt.amount, 0)
+  const filteredTotalAmount = filteredReceipts.reduce((sum, receipt) => sum + receipt.total, 0)
 
   // Loading state
   if (campaignLoading || receiptsLoading) {
@@ -135,7 +135,7 @@ export default function ReceiptsPage() {
                 <SelectContent>
                   <SelectItem value="all">Todos los tipos</SelectItem>
                   {receiptTypes.map(type => (
-                    <SelectItem key={type} value={type.toLowerCase()}>
+                    <SelectItem key={type} value={type}>
                       {type}
                     </SelectItem>
                   ))}
@@ -146,6 +146,7 @@ export default function ReceiptsPage() {
                 <SelectTrigger>
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
+                {/*
                 <SelectContent>
                   <SelectItem value="all">Todos los estados</SelectItem>
                   {receiptStatuses.map(status => (
@@ -154,6 +155,7 @@ export default function ReceiptsPage() {
                     </SelectItem>
                   ))}
                 </SelectContent>
+                */}
               </Select>
 
               <div className="flex items-center text-sm text-gray-600">

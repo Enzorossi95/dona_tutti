@@ -1,7 +1,7 @@
 'use client'
 
 import useSWR from 'swr'
-import { Receipt } from '@/types/receipt'
+import { Receipt, ReceiptType } from '@/types/receipt'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:9999'
 
@@ -25,14 +25,17 @@ interface BackendReceipt {
   campaign_id: string
   date: string
   type: string
-  amount: number
+  total: number
   description: string
-  vendor?: string
-  status?: string
-  document_url?: string
-  image_url?: string
-  created_at?: string
+  provider?: string
+  name?: string
+  quantity?: number
+  //status?: string
+  //document_url?: string
+  //image_url?: string
+  //created_at?: string
   updated_at?: string
+  note?: string
 }
 
 // Transform backend receipt to frontend format
@@ -40,16 +43,18 @@ function transformReceipt(receipt: BackendReceipt): Receipt {
   return {
     id: typeof receipt.id === 'string' ? parseInt(receipt.id) : receipt.id,
     campaignId: receipt.campaign_id,
-    date: new Date(receipt.date || receipt.created_at || new Date()).toLocaleDateString('es-AR'),
-    type: receipt.type,
-    amount: receipt.amount,
+    date: new Date(receipt.date).toLocaleDateString('es-AR'),
+    type: receipt.type as ReceiptType,
+    total: receipt.total,
     description: receipt.description,
-    document: receipt.document_url || '',
-    image: receipt.image_url || '/placeholder.svg',
-    vendor: receipt.vendor || 'No especificado',
-    status: receipt.status || 'Pagado',
-    breakdown: [], // Backend doesn't provide breakdown yet
-    notes: '', // Backend doesn't provide notes yet
+    name: receipt.name || 'No especificado',
+    quantity: receipt.quantity || 1,
+    //document: receipt.document_url || '',
+    //image: receipt.image_url || '/placeholder.svg',
+    provider: receipt.provider || 'No especificado',
+    //status: receipt.status || 'Pagado',
+    //breakdown: [], // Backend doesn't provide breakdown yet
+    note: receipt.note || '', // Backend doesn't provide notes yet
   }
 }
 
@@ -70,7 +75,7 @@ export function useCampaignPublicReceipts(campaignId: string | undefined) {
   const receipts = data?.map(transformReceipt) || []
   
   // Calculate total spent
-  const totalSpent = receipts.reduce((sum, receipt) => sum + receipt.amount, 0)
+  const totalSpent = receipts.reduce((sum, receipt) => sum + receipt.total, 0)
 
   return {
     receipts,

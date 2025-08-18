@@ -10,19 +10,23 @@ import {
   ArrowLeft,
   Edit,
   Share2,
-  Eye,
   Users,
   Calendar,
   MapPin,
   ExternalLink,
   AlertCircle,
+  Plus,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import { useParams } from "next/navigation"
 import { Receipt, ReceiptList } from "@/components/receipts/ReceiptList"
-import { ReceiptDetailModal } from "@/components/receipts/ReceiptDetailModal"
+import { ReceiptDetail } from "@/components/receipts/ReceiptDetail"
+import { ReceiptForm } from "@/components/receipts/ReceiptForm"
+import { Donation, DonationList } from "@/components/donations/DonationList"
+import { DonationDetailModal } from "@/components/donations/DonationDetailModal"
+import { DonationForm } from "@/components/donations/DonationForm"
 import { CampaignActivitiesTab } from "@/components/campaign/CampaignActivitiesTab"
 import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
 import { useCampaign } from "@/hooks/campaigns/useCampaign"
@@ -32,13 +36,16 @@ export default function AdminCampaignDetailPage() {
   const params = useParams()
   const campaignId = params.id as string
   const [selectedReceipt, setSelectedReceipt] = useState<Receipt | null>(null)
+  const [showCreateReceiptForm, setShowCreateReceiptForm] = useState(false)
+  const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null)
+  const [showCreateDonationForm, setShowCreateDonationForm] = useState(false)
   
   // Fetch campaign data from backend
   const { campaign, isLoading: campaignLoading, error: campaignError } = useCampaign(campaignId)
-  const { donations, isLoading: donationsLoading } = useCampaignDonations(campaignId)
+  const { donations, isLoading: donationsLoading, mutate: mutateDonations } = useCampaignDonations(campaignId)
   
   // Fetch receipts from backend
-  const { receipts } = useCampaignPublicReceipts(campaignId)
+  const { receipts, mutate: mutateReceipts } = useCampaignPublicReceipts(campaignId)
   
   const progressPercentage = campaign ? (campaign.raised / campaign.goal) * 100 : 0
 
@@ -221,69 +228,59 @@ export default function AdminCampaignDetailPage() {
             <TabsContent value="donations" className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>
-                    Lista de Donaciones ({donations.length})
-                    {donationsLoading && (
-                      <span className="ml-2 text-sm text-gray-500">Cargando...</span>
-                    )}
-                  </CardTitle>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>
+                      Lista de Donaciones ({donations.length})
+                      {donationsLoading && (
+                        <span className="ml-2 text-sm text-gray-500">Cargando...</span>
+                      )}
+                    </CardTitle>
+                    <Button
+                      onClick={() => setShowCreateDonationForm(true)}
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Crear Donación</span>
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent>
-                  {donations.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <p>No hay donaciones registradas aún</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-4">
-                      {donations.map((donation) => (
-                        <div key={donation.id} className="flex items-start space-x-4 p-4 border rounded-lg">
-                          <Avatar>
-                            <AvatarFallback>{donation.donorName[0]}</AvatarFallback>
-                          </Avatar>
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between mb-2">
-                              <div>
-                                <h4 className="font-medium">{donation.donorName}</h4>
-                                <p className="text-sm text-gray-500">ID: {donation.transactionId}</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="font-bold text-green-600">${donation.amount.toLocaleString()}</p>
-                                <p className="text-sm text-gray-500">
-                                  {new Date(donation.date).toLocaleDateString('es-AR')}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <Badge variant={donation.status === "completed" ? "default" : "secondary"}>
-                                {donation.status === "completed" ? "Completada" : "Pendiente"}
-                              </Badge>
-                              <Button variant="outline" size="sm">
-                                <Eye className="h-4 w-4 mr-1" />
-                                Ver Detalle
-                              </Button>
-                            </div>
-                            {donation.message && (
-                              <p className="text-sm text-gray-700 bg-gray-50 p-2 rounded mt-2">
-                                {donation.message}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <DonationList 
+                    donations={donations}
+                    variant="admin"
+                    onViewDetail={setSelectedDonation}
+                    showActions={true}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
 
             {/* Tab: Comprobantes */}
             <TabsContent value="receipts" className="space-y-6">
-              <ReceiptList 
-                receipts={receipts}
-                variant="admin"
-                onViewDetail={setSelectedReceipt}
-                showActions={true}
-              />
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <CardTitle>
+                      Comprobantes de Gastos ({receipts.length})
+                    </CardTitle>
+                    <Button
+                      onClick={() => setShowCreateReceiptForm(true)}
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Crear Comprobante</span>
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <ReceiptList 
+                    receipts={receipts}
+                    variant="admin"
+                    onViewDetail={setSelectedReceipt}
+                    showActions={true}
+                  />
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Tab: Actividades */}
@@ -425,12 +422,41 @@ export default function AdminCampaignDetailPage() {
       </div>
       
       {/* Modal de Detalle del Comprobante */}
-      <ReceiptDetailModal
+      <ReceiptDetail
         receipt={selectedReceipt}
         isOpen={!!selectedReceipt}
         onClose={() => setSelectedReceipt(null)}
+      />
+
+      {/* Modal de Crear Comprobante */}
+      <ReceiptForm
+        isOpen={showCreateReceiptForm}
+        onClose={() => setShowCreateReceiptForm(false)}
+        campaignId={campaignId}
+        onSuccess={() => {
+          mutateReceipts() // Refrescar lista de comprobantes
+          setShowCreateReceiptForm(false)
+        }}
+      />
+
+      {/* Modal de Detalle de Donación */}
+      <DonationDetailModal
+        donation={selectedDonation}
+        isOpen={!!selectedDonation}
+        onClose={() => setSelectedDonation(null)}
         onDownload={() => {/* lógica download */}}
-        onViewOriginal={() => {/* lógica view original */}}
+        onEditStatus={() => {/* lógica edit status */}}
+      />
+
+      {/* Modal de Crear Donación */}
+      <DonationForm
+        isOpen={showCreateDonationForm}
+        onClose={() => setShowCreateDonationForm(false)}
+        campaignId={campaignId}
+        onSuccess={() => {
+          mutateDonations() // Refrescar lista de donaciones
+          setShowCreateDonationForm(false)
+        }}
       />
     </div>
   )

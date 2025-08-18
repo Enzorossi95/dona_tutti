@@ -1,30 +1,46 @@
-export interface Donation {
+export interface PaymentMethod {
   id: number
-  campaignId: string
-  amount: number
-  donor: Donor
-  date: string
-  time: string
-  message?: string
-  isAnonymous: boolean
-  paymentMethod: PaymentMethod
-  status: DonationStatus
+  code: string
+  name: string
 }
 
 export interface Donor {
-  name: string
-  avatar?: string
-  isVerified?: boolean
+  id: string
+  first_name: string
+  last_name: string
+  email: string
+  phone?: string
+  is_verified: boolean
 }
 
-export type PaymentMethod = 'MercadoPago' | 'Transferencia' | 'Efectivo' | 'Tarjeta'
 export type DonationStatus = 'completed' | 'pending' | 'failed' | 'refunded'
+
+export interface Donation {
+  id: string
+  campaign_id: string
+  amount: number
+  donor_id: string
+  donor?: Donor
+  date: string
+  message?: string
+  is_anonymous: boolean
+  payment_method: PaymentMethod
+  status: DonationStatus
+  created_at?: string
+  updated_at?: string
+}
+
+export interface DonationFilters {
+  searchTerm: string
+  status: string
+  dateFrom?: string
+  dateTo?: string
+  paymentMethod?: string
+}
 
 export interface DonationSummary {
   totalAmount: number
   totalDonations: number
-  averageAmount: number
-  topDonation: number
-  byPaymentMethod: Record<PaymentMethod, number>
-  recentDonations: Donation[]
+  byStatus: Record<DonationStatus, number>
+  byPaymentMethod: Record<string, number>
 } 

@@ -3,17 +3,19 @@ export interface Receipt {
   campaignId: string
   date: string
   type: ReceiptType
-  amount: number
+  total: number
   description: string
-  document: string
-  image: string
-  vendor: string
-  status: ReceiptStatus
-  breakdown?: Array<{
-    item: string
-    amount: number
-  }>
-  notes?: string
+  //document: string
+  //image: string
+  provider: string
+  name: string
+  quantity: number
+  //status: ReceiptStatus
+  //breakdown?: Array<{
+  //  item: string
+  //  amount: number
+  //}>
+  note?: string
 }
 
 export type ReceiptType = 

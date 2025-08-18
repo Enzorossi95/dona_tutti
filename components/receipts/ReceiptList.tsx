@@ -8,7 +8,7 @@ import Image from "next/image"
 import { Receipt } from "@/types/receipt"
 
 // Re-export for compatibility
-export { Receipt }
+export type { Receipt }
 
 
 export interface ReceiptListProps {
@@ -43,6 +43,7 @@ export function ReceiptList({
 
   const renderAdminView = (receipt: Receipt) => (
     <div className="flex items-center space-x-4 p-4 border rounded-lg">
+      {/*
       <Image
         src={receipt.image || "/placeholder.svg"}
         alt="Comprobante"
@@ -50,14 +51,18 @@ export function ReceiptList({
         height={60}
         className="w-15 h-15 object-cover rounded"
       />
+      */}
+
       <div className="flex-1">
         <div className="flex items-center justify-between mb-2">
-          <h4 className="font-medium">{receipt.type}</h4>
-          <span className="font-bold text-green-600">${receipt.amount.toLocaleString()}</span>
+          <div>
+            <h4 className="font-medium">{receipt.name}</h4>
+          </div>
+          <span className="font-bold text-green-600">${receipt.total ? receipt.total.toLocaleString() : 0}</span>
         </div>
         <p className="text-sm text-gray-600 mb-1">{receipt.description}</p>
         <p className="text-xs text-gray-500">
-          {receipt.vendor} • {receipt.date}
+          {receipt.provider} • {receipt.date}
         </p>
       </div>
       {showActions && (
@@ -66,10 +71,12 @@ export function ReceiptList({
             <Eye className="h-4 w-4 mr-1" />
             Ver
           </Button>
+          {/*
           <Button variant="outline" size="sm" onClick={() => onDownload?.(receipt)}>
             <Download className="h-4 w-4 mr-1" />
             Descargar
           </Button>
+          */}
         </div>
       )}
     </div>
@@ -80,6 +87,7 @@ export function ReceiptList({
       <CardContent className="p-6">
         <div className="flex items-start justify-between">
           <div className="flex space-x-4 flex-1">
+            {/*
             <Image
               src={receipt.image || "/placeholder.svg"}
               alt="Comprobante"
@@ -87,16 +95,16 @@ export function ReceiptList({
               height={140}
               className="w-24 h-28 object-cover rounded border"
             />
-
+            */}
             <div className="flex-1">
               <div className="flex items-center justify-between mb-3">
                 <div>
                   <h3 className="font-semibold text-lg">{receipt.type}</h3>
-                  <p className="text-gray-600 text-sm">{receipt.description}</p>
+                  <p className="text-gray-600 font-bold text-lg">{receipt.name}</p>
                 </div>
-                <Badge className={getStatusColor(receipt.status)}>{receipt.status}</Badge>
+                {/*<Badge className={getStatusColor(receipt.status)}>{receipt.status}</Badge>*/}
               </div>
-
+              <div></div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm mb-4">
                 <div>
                   <span className="text-gray-500">Fecha:</span>
@@ -104,18 +112,18 @@ export function ReceiptList({
                 </div>
                 <div>
                   <span className="text-gray-500">Proveedor:</span>
-                  <p className="font-medium">{receipt.vendor}</p>
+                  <p className="font-medium">{receipt.provider}</p>
                 </div>
-                <div>
+                {/*<div>
                   <span className="text-gray-500">Documento:</span>
                   <p className="font-medium text-blue-600 hover:underline cursor-pointer">{receipt.document}</p>
-                </div>
+                </div>*/}
               </div>
 
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  <span className="text-xl font-bold text-green-600">${receipt.amount.toLocaleString()}</span>
+                  <span className="text-gray-500">Total:</span>
+                  <span className="text-xl font-bold text-green-600">${receipt.total ? receipt.total.toLocaleString() : 0}</span>
                 </div>
 
                 {showActions && (

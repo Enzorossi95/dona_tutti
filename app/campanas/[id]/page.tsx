@@ -13,7 +13,7 @@ import Link from "next/link"
 import { useParams } from "next/navigation"
 import { useCampaign } from "@/hooks/campaigns/useCampaign"
 import { useCampaignActivities } from "@/hooks/campaigns/useCampaignActivities"
-import { useCampaignReceipts } from "@/hooks/campaigns/useCampaignReceipts"
+import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
 import { formatCurrency, formatPercentage } from "@/lib/utils/formatters"
 import EmptyState from "@/components/shared/EmptyState"
 
@@ -26,7 +26,7 @@ export default function CampaignPage() {
   // Fetch data from backend
   const { campaign, isLoading: campaignLoading, error: campaignError } = useCampaign(campaignId)
   const { activities, isLoading: activitiesLoading } = useCampaignActivities(campaignId)
-  const { receipts, totalSpent } = useCampaignReceipts(campaignId)
+  const { receipts, totalSpent } = useCampaignPublicReceipts(campaignId)
 
   // Loading state
   if (campaignLoading || activitiesLoading) {
@@ -308,7 +308,7 @@ export default function CampaignPage() {
                   {receipts.slice(0, 3).map((receipt) => (
                     <div key={receipt.id} className="flex justify-between text-sm">
                       <span>{receipt.type}</span>
-                      <span className="font-medium">{formatCurrency(receipt.amount)}</span>
+                      <span className="font-medium">{formatCurrency(receipt.total)}</span>
                     </div>
                   ))}
                   <div className="border-t pt-2 flex justify-between font-medium">
