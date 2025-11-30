@@ -13,9 +13,10 @@ import { toast } from 'sonner'
 
 interface CampaignActivitiesTabProps {
   campaignId: string
+  readOnly?: boolean
 }
 
-export function CampaignActivitiesTab({ campaignId }: CampaignActivitiesTabProps) {
+export function CampaignActivitiesTab({ campaignId, readOnly = false }: CampaignActivitiesTabProps) {
   const [showAddUpdate, setShowAddUpdate] = useState(false)
   const [selectedUpdate, setSelectedUpdate] = useState<CampaignActivity | null>(null)
   const [editingUpdate, setEditingUpdate] = useState<CampaignActivity | null>(null)
@@ -149,20 +150,24 @@ export function CampaignActivitiesTab({ campaignId }: CampaignActivitiesTabProps
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle>Actividades y Actualizaciones</CardTitle>
-            <Button onClick={() => setShowAddUpdate(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Nueva Actividad
-            </Button>
+            {!readOnly && (
+              <Button onClick={() => setShowAddUpdate(true)}>
+                <Plus className="h-4 w-4 mr-2" />
+                Nueva Actividad
+              </Button>
+            )}
           </div>
         </CardHeader>
         <CardContent>
           {activities.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p className="mb-4">No hay actividades registradas aún</p>
-              <Button variant="outline" onClick={() => setShowAddUpdate(true)}>
-                <Plus className="h-4 w-4 mr-2" />
-                Crear Primera Actividad
-              </Button>
+              {!readOnly && (
+                <Button variant="outline" onClick={() => setShowAddUpdate(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Crear Primera Actividad
+                </Button>
+              )}
             </div>
           ) : (
             <div className="space-y-6">
@@ -180,30 +185,34 @@ export function CampaignActivitiesTab({ campaignId }: CampaignActivitiesTabProps
                       <Badge variant="default">
                         Publicado
                       </Badge>
-                      <Button 
-                        variant="ghost" 
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setEditingUpdate(update)
+                            setShowAddUpdate(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      )}
+                      <Button
+                        variant="ghost"
                         size="sm"
-                        onClick={() => {
-                          setEditingUpdate(update)
-                          setShowAddUpdate(true)
-                        }}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
                         onClick={() => setSelectedUpdate(update)}
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDelete(update.id)}
-                      >
-                        <Trash2 className="h-4 w-4 text-red-500" />
-                      </Button>
+                      {!readOnly && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleDelete(update.id)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <h4 className="font-semibold mb-2">{update.title}</h4>
@@ -291,19 +300,21 @@ export function CampaignActivitiesTab({ campaignId }: CampaignActivitiesTabProps
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4 border-t">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    setEditingUpdate(selectedUpdate)
-                    setSelectedUpdate(null)
-                    setShowAddUpdate(true)
-                  }}
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar Actividad
-                </Button>
-              </div>
+              {!readOnly && (
+                <div className="flex justify-end space-x-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setEditingUpdate(selectedUpdate)
+                      setSelectedUpdate(null)
+                      setShowAddUpdate(true)
+                    }}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Editar Actividad
+                  </Button>
+                </div>
+              )}
             </div>
           </DialogContent>
         </Dialog>

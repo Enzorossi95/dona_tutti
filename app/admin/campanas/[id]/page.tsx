@@ -17,6 +17,9 @@ import {
   AlertCircle,
   Plus,
   FileText,
+  CheckCircle,
+  Lock,
+  Download,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -36,6 +39,10 @@ import { useDonationStatus } from "@/hooks/campaigns/useDonationStatus"
 import { shouldShowContractButton } from "@/lib/utils/contractHelpers"
 import { DonationStatus } from "@/types/donation"
 import { toast } from "sonner"
+import { CampaignClosureDialog } from "@/components/campaign/CampaignClosureDialog"
+import { useCampaignClosure } from "@/hooks/campaigns/useCampaignClosure"
+import { useAuditReport } from "@/hooks/campaigns/useAuditReport"
+import { CloseCampaignRequest } from "@/types/closure"
 
 export default function AdminCampaignDetailPage() {
   const params = useParams()
@@ -44,9 +51,10 @@ export default function AdminCampaignDetailPage() {
   const [showCreateReceiptForm, setShowCreateReceiptForm] = useState(false)
   const [selectedDonation, setSelectedDonation] = useState<Donation | null>(null)
   const [showCreateDonationForm, setShowCreateDonationForm] = useState(false)
+  const [showClosureDialog, setShowClosureDialog] = useState(false)
   
   // Fetch campaign data from backend
-  const { campaign, isLoading: campaignLoading, error: campaignError } = useCampaign(campaignId)
+  const { campaign, isLoading: campaignLoading, error: campaignError, mutate: mutateCampaign } = useCampaign(campaignId)
   const { donations, isLoading: donationsLoading, mutate: mutateDonations } = useCampaignDonations(campaignId)
   
   // Fetch receipts from backend
@@ -54,6 +62,15 @@ export default function AdminCampaignDetailPage() {
 
   // Donation status management
   const { updateStatus } = useDonationStatus()
+
+  // Campaign closure management
+  const { closeCampaign, isLoading: closureLoading } = useCampaignClosure()
+
+  // Determine if campaign is closed
+  const isCampaignClosed = campaign?.status === 'completed'
+
+  // Fetch audit report for closed campaigns
+  const { auditReport } = useAuditReport(isCampaignClosed ? campaignId : undefined)
   
   const progressPercentage = campaign ? (campaign.raised / campaign.goal) * 100 : 0
 
@@ -92,6 +109,20 @@ export default function AdminCampaignDetailPage() {
     } catch (error) {
       console.error('Error updating donation status:', error)
       toast.error('Error al actualizar el estado de la donación')
+    }
+  }
+
+  // Handle campaign closure
+  const handleCloseCampaign = async (request: CloseCampaignRequest) => {
+    try {
+      await closeCampaign(campaignId, request)
+      setShowClosureDialog(false)
+      toast.success('Campaña cerrada exitosamente')
+      // Refresh campaign data to update status
+      mutateCampaign()
+    } catch (error) {
+      console.error('Error closing campaign:', error)
+      toast.error(error instanceof Error ? error.message : 'Error al cerrar la campaña')
     }
   }
 
@@ -236,6 +267,29 @@ export default function AdminCampaignDetailPage() {
         </Card>
       )}
 
+      {/* Closed Campaign Banner */}
+      {isCampaignClosed && (
+        <Card className="border-blue-400 bg-blue-50">
+          <CardContent className="py-4">
+            <div className="flex items-center gap-4">
+              <div className="bg-blue-100 rounded-full p-3">
+                <CheckCircle className="h-6 w-6 text-blue-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-blue-900">Campaña Cerrada</h3>
+                <p className="text-sm text-blue-700">
+                  Esta campaña ha sido cerrada. No se pueden agregar donaciones, comprobantes ni actividades.
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Lock className="h-4 w-4 text-blue-600" />
+                <span className="text-sm text-blue-700 font-medium">Solo lectura</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Contenido Principal */}
         <div className="xl:col-span-3">
@@ -324,13 +378,15 @@ export default function AdminCampaignDetailPage() {
                         <span className="ml-2 text-sm text-gray-500">Cargando...</span>
                       )}
                     </CardTitle>
-                    <Button
-                      onClick={() => setShowCreateDonationForm(true)}
-                      className="flex items-center space-x-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Crear Donación</span>
-                    </Button>
+                    {!isCampaignClosed && (
+                      <Button
+                        onClick={() => setShowCreateDonationForm(true)}
+                        className="flex items-center space-x-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Crear Donación</span>
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -352,13 +408,15 @@ export default function AdminCampaignDetailPage() {
                     <CardTitle>
                       Comprobantes de Gastos ({receipts.length})
                     </CardTitle>
-                    <Button
-                      onClick={() => setShowCreateReceiptForm(true)}
-                      className="flex items-center space-x-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      <span>Crear Comprobante</span>
-                    </Button>
+                    {!isCampaignClosed && (
+                      <Button
+                        onClick={() => setShowCreateReceiptForm(true)}
+                        className="flex items-center space-x-2"
+                      >
+                        <Plus className="h-4 w-4" />
+                        <span>Crear Comprobante</span>
+                      </Button>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -374,7 +432,7 @@ export default function AdminCampaignDetailPage() {
 
             {/* Tab: Actividades */}
             <TabsContent value="updates" className="space-y-6">
-              <CampaignActivitiesTab campaignId={campaign.id} />
+              <CampaignActivitiesTab campaignId={campaign.id} readOnly={isCampaignClosed} />
             </TabsContent>
 
             {/* Tab: Configuración */}
@@ -386,11 +444,42 @@ export default function AdminCampaignDetailPage() {
                 <CardContent className="space-y-6">
                   <div>
                     <h4 className="font-medium mb-3">Estado de la Campaña</h4>
-                    <div className="flex items-center space-x-4">
-                      <Button variant="outline">Pausar Campaña</Button>
-                      <Button variant="outline">Marcar como Completada</Button>
-                      <Button variant="destructive">Eliminar Campaña</Button>
-                    </div>
+                    {isCampaignClosed ? (
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                        <div className="flex items-center gap-3">
+                          <CheckCircle className="h-5 w-5 text-blue-600" />
+                          <div className="flex-1">
+                            <p className="font-medium text-blue-900">Campaña Cerrada</p>
+                            <p className="text-sm text-blue-700">
+                              Esta campaña ha sido cerrada y no puede modificarse.
+                            </p>
+                          </div>
+                        </div>
+                        {auditReport?.report_pdf_url && (
+                          <div className="mt-4 pt-4 border-t border-blue-200">
+                            <Button
+                              variant="outline"
+                              className="w-full"
+                              onClick={() => window.open(auditReport.report_pdf_url, '_blank')}
+                            >
+                              <Download className="h-4 w-4 mr-2" />
+                              Descargar Reporte de Auditoría (PDF)
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex items-center space-x-4">
+                        <Button variant="outline">Pausar Campaña</Button>
+                        <Button
+                          variant="destructive"
+                          onClick={() => setShowClosureDialog(true)}
+                        >
+                          <Lock className="h-4 w-4 mr-2" />
+                          Cerrar Campaña
+                        </Button>
+                      </div>
+                    )}
                   </div>
 
                   <div>
@@ -398,15 +487,15 @@ export default function AdminCampaignDetailPage() {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span>Permitir donaciones anónimas</span>
-                        <input type="checkbox" defaultChecked />
+                        <input type="checkbox" defaultChecked disabled={isCampaignClosed} />
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Mostrar lista de donantes</span>
-                        <input type="checkbox" defaultChecked />
+                        <input type="checkbox" defaultChecked disabled={isCampaignClosed} />
                       </div>
                       <div className="flex items-center justify-between">
                         <span>Permitir comentarios</span>
-                        <input type="checkbox" defaultChecked />
+                        <input type="checkbox" defaultChecked disabled={isCampaignClosed} />
                       </div>
                     </div>
                   </div>
@@ -545,6 +634,17 @@ export default function AdminCampaignDetailPage() {
           mutateDonations() // Refrescar lista de donaciones
           setShowCreateDonationForm(false)
         }}
+      />
+
+      {/* Modal de Cerrar Campaña */}
+      <CampaignClosureDialog
+        open={showClosureDialog}
+        onOpenChange={setShowClosureDialog}
+        campaignTitle={campaign.title}
+        campaignGoal={campaign.goal}
+        campaignRaised={campaign.raised || 0}
+        onConfirm={handleCloseCampaign}
+        isLoading={closureLoading}
       />
     </div>
   )

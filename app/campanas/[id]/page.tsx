@@ -14,8 +14,11 @@ import { useParams } from "next/navigation"
 import { useCampaign } from "@/hooks/campaigns/useCampaign"
 import { useCampaignActivities } from "@/hooks/campaigns/useCampaignActivities"
 import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
+import { useAuditReport } from "@/hooks/campaigns/useAuditReport"
 import { formatCurrency, formatPercentage } from "@/lib/utils/formatters"
 import EmptyState from "@/components/shared/EmptyState"
+import { ClosedCampaignBanner } from "@/components/campaign/ClosedCampaignBanner"
+import { AuditReportSection } from "@/components/campaign/AuditReportSection"
 
 export default function CampaignPage() {
   const params = useParams()
@@ -27,6 +30,14 @@ export default function CampaignPage() {
   const { campaign, isLoading: campaignLoading, error: campaignError } = useCampaign(campaignId)
   const { activities, isLoading: activitiesLoading } = useCampaignActivities(campaignId)
   const { receipts, totalSpent } = useCampaignPublicReceipts(campaignId)
+
+  // Fetch audit report only if campaign is completed
+  const { auditReport } = useAuditReport(
+    campaign?.status === 'completed' ? campaignId : undefined
+  )
+
+  // Determine if campaign is closed
+  const isCampaignClosed = campaign?.status === 'completed'
 
   // Loading state
   if (campaignLoading || activitiesLoading) {
@@ -83,6 +94,11 @@ export default function CampaignPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Banner de Campaña Cerrada */}
+        {isCampaignClosed && (
+          <ClosedCampaignBanner closedAt={auditReport?.closed_at} />
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Columna Principal */}
           <div className="lg:col-span-2 space-y-6">
@@ -222,107 +238,114 @@ export default function CampaignPage() {
             </Card>
           </div>
 
-          {/* Sidebar de Donación */}
+          {/* Sidebar */}
           <div className="space-y-6">
-            {/* Card de Donación - Solo este será sticky */}
-            <Card>
-              <CardContent className="p-6">
-                {/* Progreso de Donación */}
-                <div className="mb-6">
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-2xl font-bold text-green-600">{formatCurrency(campaign.raised)}</span>
-                    <span className="text-sm text-gray-500">de {formatCurrency(campaign.goal)}</span>
-                  </div>
-                  <Progress value={progressPercentage} className="h-3 mb-2" />
-                  <p className="text-sm text-gray-600">{progressPercentage}% del objetivo alcanzado</p>
-                </div>
-
-                {/* Estadísticas */}
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                      <Users className="h-4 w-4 text-blue-500 mr-1" />
-                      <span className="font-bold text-lg">{campaign.donors}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">Donantes</p>
-                  </div>
-                  <div className="text-center">
-                    <div className="flex items-center justify-center mb-1">
-                      <Calendar className="h-4 w-4 text-orange-500 mr-1" />
-                      <span className="font-bold text-lg">{campaign.daysLeft}</span>
-                    </div>
-                    <p className="text-xs text-gray-500">Días restantes</p>
-                  </div>
-                </div>
-
-                {/* Botón de Donación */}
-                <Button className="w-full bg-green-600 hover:bg-green-700 text-white mb-4" size="lg">
-                  <Heart className="h-4 w-4 mr-2" />
-                  Donar Ahora
-                </Button>
-
-                {/* Información del Organizador */}
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-3">Organizado por</h4>
-                  <div className="flex items-center space-x-3">
-                    <Avatar>
-                      <AvatarImage src={campaign.organizer?.avatar || "/placeholder.svg"} />
-                      <AvatarFallback>{campaign.organizer?.name?.[0] || "O"}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-1">
-                        <span className="font-medium text-sm">{campaign.organizer?.name || "Organizador"}</span>
-                        {campaign.organizer?.verified && (
-                          <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
-                            Verificado
-                          </Badge>
-                        )}
+            {isCampaignClosed ? (
+              /* Reporte de Auditoría para Campañas Cerradas */
+              <AuditReportSection campaignId={campaignId} />
+            ) : (
+              /* Sidebar de Donación para Campañas Activas */
+              <>
+                <Card>
+                  <CardContent className="p-6">
+                    {/* Progreso de Donación */}
+                    <div className="mb-6">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-2xl font-bold text-green-600">{formatCurrency(campaign.raised)}</span>
+                        <span className="text-sm text-gray-500">de {formatCurrency(campaign.goal)}</span>
                       </div>
-                      <div className="flex items-center text-xs text-gray-500 mt-1">
-                        <MapPin className="h-3 w-3 mr-1" />
-                        {campaign.location}
+                      <Progress value={progressPercentage} className="h-3 mb-2" />
+                      <p className="text-sm text-gray-600">{progressPercentage}% del objetivo alcanzado</p>
+                    </div>
+
+                    {/* Estadísticas */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-1">
+                          <Users className="h-4 w-4 text-blue-500 mr-1" />
+                          <span className="font-bold text-lg">{campaign.donors}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">Donantes</p>
+                      </div>
+                      <div className="text-center">
+                        <div className="flex items-center justify-center mb-1">
+                          <Calendar className="h-4 w-4 text-orange-500 mr-1" />
+                          <span className="font-bold text-lg">{campaign.daysLeft}</span>
+                        </div>
+                        <p className="text-xs text-gray-500">Días restantes</p>
                       </div>
                     </div>
-                  </div>
-                </div>
 
-                {/* Métodos de Pago */}
-                <div className="border-t pt-4 mt-4">
-                  <h4 className="font-semibold mb-3 text-sm">Métodos de pago seguros</h4>
-                  <div className="flex items-center space-x-2">
-                    <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">MercadoPago</div>
-                    <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Tarjetas</div>
-                    <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Transferencia</div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Transparencia - No sticky para que sea visible */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Transparencia</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {receipts.slice(0, 3).map((receipt) => (
-                    <div key={receipt.id} className="flex justify-between text-sm">
-                      <span>{receipt.type}</span>
-                      <span className="font-medium">{formatCurrency(receipt.total)}</span>
-                    </div>
-                  ))}
-                  <div className="border-t pt-2 flex justify-between font-medium">
-                    <span>Total gastado</span>
-                    <span>{formatCurrency(totalSpent)}</span>
-                  </div>
-                  <Link href={`/campanas/${campaign.id}/comprobantes`}>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Ver Comprobantes ({receipts.length})
+                    {/* Botón de Donación */}
+                    <Button className="w-full bg-green-600 hover:bg-green-700 text-white mb-4" size="lg">
+                      <Heart className="h-4 w-4 mr-2" />
+                      Donar Ahora
                     </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
+
+                    {/* Información del Organizador */}
+                    <div className="border-t pt-4">
+                      <h4 className="font-semibold mb-3">Organizado por</h4>
+                      <div className="flex items-center space-x-3">
+                        <Avatar>
+                          <AvatarImage src={campaign.organizer?.avatar || "/placeholder.svg"} />
+                          <AvatarFallback>{campaign.organizer?.name?.[0] || "O"}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-1">
+                            <span className="font-medium text-sm">{campaign.organizer?.name || "Organizador"}</span>
+                            {campaign.organizer?.verified && (
+                              <Badge variant="secondary" className="text-xs bg-blue-100 text-blue-800">
+                                Verificado
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center text-xs text-gray-500 mt-1">
+                            <MapPin className="h-3 w-3 mr-1" />
+                            {campaign.location}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Métodos de Pago */}
+                    <div className="border-t pt-4 mt-4">
+                      <h4 className="font-semibold mb-3 text-sm">Métodos de pago seguros</h4>
+                      <div className="flex items-center space-x-2">
+                        <div className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-medium">MercadoPago</div>
+                        <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Tarjetas</div>
+                        <div className="bg-gray-200 text-gray-700 px-2 py-1 rounded text-xs">Transferencia</div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Transparencia - No sticky para que sea visible */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Transparencia</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {receipts.slice(0, 3).map((receipt) => (
+                        <div key={receipt.id} className="flex justify-between text-sm">
+                          <span>{receipt.type}</span>
+                          <span className="font-medium">{formatCurrency(receipt.total)}</span>
+                        </div>
+                      ))}
+                      <div className="border-t pt-2 flex justify-between font-medium">
+                        <span>Total gastado</span>
+                        <span>{formatCurrency(totalSpent)}</span>
+                      </div>
+                      <Link href={`/campanas/${campaign.id}/comprobantes`}>
+                        <Button variant="outline" size="sm" className="w-full">
+                          Ver Comprobantes ({receipts.length})
+                        </Button>
+                      </Link>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            )}
           </div>
         </div>
 

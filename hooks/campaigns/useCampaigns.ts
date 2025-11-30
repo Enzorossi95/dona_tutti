@@ -104,11 +104,11 @@ export function useCampaigns() {
   // Transform campaigns to frontend format
   const campaigns = data?.map(transformCampaign) || []
 
-  // Filter only active campaigns for public view
-  const activeCampaigns = campaigns.filter(c => c.status === 'active')
+  // Filter active and completed campaigns for public view
+  const publicCampaigns = campaigns.filter(c => c.status === 'active' || c.status === 'completed')
 
   return {
-    campaigns: activeCampaigns,
+    campaigns: publicCampaigns,
     allCampaigns: campaigns,
     isLoading,
     error,
