@@ -24,12 +24,14 @@ import {
   TrendingUp,
   Clock,
   Target,
+  FileText,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useState } from "react"
 import { Campaign } from "@/types/campaign"
 import { getCategoryName, getUrgencyLevel, getUrgencyColor } from "@/lib/utils/categoryMapping"
+import { shouldShowContractButton, getContractButtonText, getContractStatusBadge } from "@/lib/utils/contractHelpers"
 
 interface CampaignAdminListProps {
   campaigns: Campaign[]
@@ -262,7 +264,7 @@ export function CampaignAdminList({
                         height={128}
                         className="w-full h-full object-cover"
                       />
-                      {campaign.urgency >= 8 && (
+                      {parseInt(campaign.urgency) >= 8 && (
                         <div className="absolute top-2 left-2">
                           <div className="bg-red-500 text-white text-xs px-2 py-1 rounded-full font-medium animate-pulse">
                             URGENTE
@@ -275,11 +277,16 @@ export function CampaignAdminList({
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex-1 mr-3">
                           <h3 className="font-semibold text-gray-900 line-clamp-1 mb-1">{campaign.title}</h3>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Badge className={`${getStatusColor(campaign.status)} border text-xs flex items-center gap-1 px-2 py-0.5`}>
                               {getStatusIcon(campaign.status)}
                               {getStatusText(campaign.status)}
                             </Badge>
+                            {getContractStatusBadge(campaign) && (
+                              <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 border text-xs px-2 py-0.5">
+                                {getContractStatusBadge(campaign)}
+                              </Badge>
+                            )}
                             <span className="text-xs text-gray-500">
                               {getCategoryName(campaign.category)}
                             </span>
@@ -344,6 +351,14 @@ export function CampaignAdminList({
                           </div>
                           <Progress value={progressPercentage} className="h-2" />
                         </div>
+                        {shouldShowContractButton(campaign) && (
+                          <Link href={`/admin/campanas/${campaign.id}/contrato`}>
+                            <Button size="sm" variant={campaign.status === 'draft' ? "default" : "outline"} className={campaign.status === 'draft' ? "bg-yellow-600 hover:bg-yellow-700" : ""}>
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              {getContractButtonText(campaign)}
+                            </Button>
+                          </Link>
+                        )}
                         <Link href={`/admin/campanas/${campaign.id}`}>
                           <Button size="sm" variant="outline" className="hover:bg-gray-900 hover:text-white transition-colors">
                             <Eye className="h-3.5 w-3.5 mr-1" />
@@ -394,15 +409,20 @@ export function CampaignAdminList({
                         </div>
 
                         {/* Badges de estado y urgencia */}
-                        <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-2 mb-3 flex-wrap">
                           <Badge className={`${getStatusColor(campaign.status)} border text-xs flex items-center gap-1 px-2 py-0.5`}>
                             {getStatusIcon(campaign.status)}
                             {getStatusText(campaign.status)}
                           </Badge>
-                          {campaign.urgency >= 5 && (
-                            <Badge className={`${getUrgencyBadgeColor(campaign.urgency)} border text-xs px-2 py-0.5`}>
+                          {getContractStatusBadge(campaign) && (
+                            <Badge className="bg-yellow-50 text-yellow-700 border-yellow-200 border text-xs px-2 py-0.5">
+                              {getContractStatusBadge(campaign)}
+                            </Badge>
+                          )}
+                          {parseInt(campaign.urgency || '0') >= 5 && (
+                            <Badge className={`${getUrgencyBadgeColor(parseInt(campaign.urgency))} border text-xs px-2 py-0.5`}>
                               <AlertCircle className="w-3 h-3 mr-1" />
-                              Urgencia: {getUrgencyLevel(campaign.urgency)}
+                              Urgencia: {getUrgencyLevel(parseInt(campaign.urgency))}
                             </Badge>
                           )}
                         </div>
@@ -447,7 +467,19 @@ export function CampaignAdminList({
                       </div>
 
                       {/* Columna derecha: Acciones */}
-                      <div className="flex items-center gap-2 md:ml-4">
+                      <div className="flex items-center gap-2 md:ml-4 flex-wrap">
+                        {shouldShowContractButton(campaign) && (
+                          <Link href={`/admin/campanas/${campaign.id}/contrato`}>
+                            <Button 
+                              size="sm" 
+                              variant={campaign.status === 'draft' ? "default" : "outline"}
+                              className={campaign.status === 'draft' ? "bg-yellow-600 hover:bg-yellow-700" : ""}
+                            >
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              {getContractButtonText(campaign)}
+                            </Button>
+                          </Link>
+                        )}
                         <Link href={`/admin/campanas/${campaign.id}`}>
                           <Button size="sm" variant="outline">
                             <Eye className="h-3.5 w-3.5 mr-1" />

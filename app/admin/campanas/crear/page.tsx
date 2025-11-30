@@ -8,7 +8,8 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
-import { ArrowLeft, Upload, X, Plus, MapPin, DollarSign, Camera, Save, Eye, User, LogOut } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { ArrowLeft, Upload, X, Plus, MapPin, DollarSign, Camera, Save, Eye, User, LogOut, CheckCircle, FileText } from "lucide-react"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import Link from "next/link"
@@ -26,9 +27,10 @@ export default function CreateCampaignPage() {
   const router = useRouter()
   const { user } = useAuth()
   const { isLoading: isLoadingData, paymentMethods: availablePaymentMethods, organizer: organizerInfo, error } = useInitialData(user?.id)
-  const { createCampaign, isLoading: isCreating, error: createError, isSuccess } = useCreateCampaign()
+  const { createCampaign, isLoading: isCreating, error: createError, isSuccess, data } = useCreateCampaign()
   const { categories, isLoading: isLoadingCategories, error: categoriesError } = useCategories()
   const { toasts, showSuccess, showError, dismissToast } = useToast()
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
   
   const [formData, setFormData] = useState<CreateCampaignForm>({
     title: "",
@@ -97,13 +99,11 @@ export default function CreateCampaignPage() {
 
   // Handle successful campaign creation
   useEffect(() => {
-    if (isSuccess) {
+    if (isSuccess && data?.id) {
       showSuccess('¡Campaña creada exitosamente!')
-      setTimeout(() => {
-        router.push('/admin/campanas')
-      }, 4000) // Give more time to see the success message
+      setShowSuccessModal(true)
     }
-  }, [isSuccess, router, showSuccess])
+  }, [isSuccess, data, showSuccess])
 
   // Show creation errors
   useEffect(() => {
@@ -471,7 +471,7 @@ export default function CreateCampaignPage() {
         location: formData.location.trim(),
         category: formData.category,
         urgency: formData.urgency === "critical" ? 10 : formData.urgency === "high" ? 8 : formData.urgency === "medium" ? 5 : 2,
-        status: "active",
+        status: "draft",
         payment_methods: formData.paymentMethods,
         beneficiary_name: formData.beneficiaryName.trim(),
         beneficiary_age: beneficiaryAge,
@@ -1074,6 +1074,55 @@ export default function CreateCampaignPage() {
       </div>
     </div>
     </form>
+
+    {/* Success Modal */}
+    <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <div className="flex justify-center mb-4">
+            <div className="bg-green-100 rounded-full p-3">
+              <CheckCircle className="h-12 w-12 text-green-600" />
+            </div>
+          </div>
+          <DialogTitle className="text-center text-2xl">
+            ¡Campaña Creada Exitosamente!
+          </DialogTitle>
+          <DialogDescription className="text-center text-base pt-2">
+            Tu campaña ha sido creada. Ahora necesitas firmar el contrato legal para que pueda ser publicada.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 my-4">
+          <p className="text-sm text-blue-800">
+            <strong>Próximo paso:</strong> Deberás revisar y aceptar el contrato legal. Este proceso es rápido y seguro.
+          </p>
+        </div>
+
+        <DialogFooter className="sm:justify-center gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              setShowSuccessModal(false)
+              router.push('/admin/campanas')
+            }}
+          >
+            Ir al Dashboard
+          </Button>
+          <Button
+            className="bg-green-600 hover:bg-green-700"
+            onClick={() => {
+              setShowSuccessModal(false)
+              if (data?.id) {
+                router.push(`/admin/campanas/${data.id}/contrato`)
+              }
+            }}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            Firmar Contrato Legal
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     </CreateCampaignRoute>
   )
 }

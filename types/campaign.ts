@@ -39,7 +39,7 @@ export interface Organizer {
 
 export type CampaignCategory = 'Médico' | 'Refugio' | 'Alimentación' | 'Rescate'
 export type CampaignUrgency = 'Alta' | 'Media' | 'Baja'
-export type CampaignStatus = 'active' | 'completed' | 'paused' | 'cancelled' | 'draft'
+export type CampaignStatus = 'active' | 'completed' | 'paused' | 'cancelled' | 'draft' | 'pending_approval'
 
 export interface CampaignFilters {
   searchTerm: string
@@ -78,4 +78,29 @@ export interface CampaignDonation {
   status: string
   message: string
   anonymous: boolean
+}
+
+// Contract types
+export interface Contract {
+  id: string
+  campaign_id: string
+  organizer_id: string
+  contract_pdf_url: string
+  contract_hash: string
+  accepted_at: string
+  acceptance_metadata: {
+    ip: string
+    user_agent: string
+  }
+  created_at: string
+}
+
+export interface GenerateContractResponse {
+  message: string
+  contract_url: string
+}
+
+export interface AcceptContractResponse {
+  message: string
+  status: 'pending_approval'
 }

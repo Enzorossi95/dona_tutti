@@ -16,6 +16,7 @@ import {
   ExternalLink,
   AlertCircle,
   Plus,
+  FileText,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -31,6 +32,7 @@ import { CampaignActivitiesTab } from "@/components/campaign/CampaignActivitiesT
 import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
 import { useCampaign } from "@/hooks/campaigns/useCampaign"
 import { useCampaignDonations } from "@/hooks/campaigns/useCampaignDonations"
+import { shouldShowContractButton } from "@/lib/utils/contractHelpers"
 
 export default function AdminCampaignDetailPage() {
   const params = useParams()
@@ -146,6 +148,49 @@ export default function AdminCampaignDetailPage() {
           </Button>
         </div>
       </div>
+
+      {/* Contract Banner - Show for draft and pending_approval campaigns */}
+      {shouldShowContractButton(campaign) && (
+        <Card className="border-yellow-400 bg-yellow-50">
+          <CardContent className="py-6">
+            <div className="flex items-start gap-4">
+              <div className="bg-yellow-100 rounded-full p-3">
+                <AlertCircle className="h-6 w-6 text-yellow-600" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-yellow-900 text-lg mb-1">
+                  {campaign.status === 'draft' 
+                    ? 'Acción Requerida: Firma del Contrato Legal'
+                    : 'Contrato Pendiente de Aprobación'
+                  }
+                </h3>
+                <p className="text-sm text-yellow-800 mb-3">
+                  {campaign.status === 'draft'
+                    ? 'Para que tu campaña pueda ser publicada, necesitas firmar el contrato legal. Este proceso es rápido y seguro.'
+                    : 'Tu contrato ha sido firmado y está pendiente de aprobación por parte del equipo de DonaAyuda. Recibirás una notificación cuando sea aprobado.'
+                  }
+                </p>
+                {campaign.status === 'draft' && (
+                  <Link href={`/admin/campanas/${campaign.id}/contrato`}>
+                    <Button className="bg-yellow-600 hover:bg-yellow-700">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Firmar Contrato Ahora
+                    </Button>
+                  </Link>
+                )}
+                {campaign.status === 'pending_approval' && (
+                  <Link href={`/admin/campanas/${campaign.id}/contrato`}>
+                    <Button variant="outline" className="border-yellow-600 text-yellow-700 hover:bg-yellow-100">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Ver Contrato Firmado
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Contenido Principal */}
