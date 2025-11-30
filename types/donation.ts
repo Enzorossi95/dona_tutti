@@ -26,6 +26,7 @@ export interface Donation {
   is_anonymous: boolean
   payment_method: PaymentMethod
   status: DonationStatus
+  receipt_url?: string | null
   created_at?: string
   updated_at?: string
 }

@@ -18,6 +18,7 @@ interface BackendDonation {
   is_anonymous: boolean
   payment_method: PaymentMethod
   status: DonationStatus
+  receipt_url?: string | null
   created_at?: string
   updated_at?: string
   donor?: Donor
@@ -35,11 +36,16 @@ function transformDonation(donation: BackendDonation): Donation {
     is_anonymous: donation.is_anonymous,
     payment_method: donation.payment_method,
     status: donation.status,
+    receipt_url: donation.receipt_url,
     created_at: donation.created_at,
     updated_at: donation.updated_at,
     donor: donation.donor
   }
 }
+
+// Export for use in other hooks
+export { transformDonation }
+export type { BackendDonation }
 
 export function useCampaignDonations(campaignId: string | undefined) {
   const { isAuthenticated } = useAuth()

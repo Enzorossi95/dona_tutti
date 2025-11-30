@@ -32,7 +32,10 @@ import { CampaignActivitiesTab } from "@/components/campaign/CampaignActivitiesT
 import { useCampaignPublicReceipts } from "@/hooks/campaigns/useCampaignPublicReceipts"
 import { useCampaign } from "@/hooks/campaigns/useCampaign"
 import { useCampaignDonations } from "@/hooks/campaigns/useCampaignDonations"
+import { useDonationStatus } from "@/hooks/campaigns/useDonationStatus"
 import { shouldShowContractButton } from "@/lib/utils/contractHelpers"
+import { DonationStatus } from "@/types/donation"
+import { toast } from "sonner"
 
 export default function AdminCampaignDetailPage() {
   const params = useParams()
@@ -48,8 +51,49 @@ export default function AdminCampaignDetailPage() {
   
   // Fetch receipts from backend
   const { receipts, mutate: mutateReceipts } = useCampaignPublicReceipts(campaignId)
+
+  // Donation status management
+  const { updateStatus } = useDonationStatus()
   
   const progressPercentage = campaign ? (campaign.raised / campaign.goal) * 100 : 0
+
+  // Handle viewing donation detail - always fetch fresh data
+  const handleViewDonationDetail = (donation: Donation) => {
+    // Always get the latest version from the donations array
+    const freshDonation = donations.find(d => d.id === donation.id) || donation
+    setSelectedDonation(freshDonation)
+  }
+
+  // Handle donation status change
+  const handleDonationStatusChange = async (donationId: string, newStatus: DonationStatus) => {
+    try {
+      // Get the updated donation from API (includes receipt_url if generated)
+      const updatedDonation = await updateStatus({ campaignId, donationId, status: newStatus })
+      
+      // Optimistically update the cache with the new donation data
+      mutateDonations(
+        donations.map(d => d.id === donationId ? updatedDonation : d),
+        false // Don't revalidate immediately
+      )
+      
+      // Update selected donation if the modal is open
+      if (selectedDonation && selectedDonation.id === donationId) {
+        setSelectedDonation(updatedDonation)
+      }
+      
+      // Show success message
+      toast.success(`Estado actualizado a: ${newStatus}`)
+      if (newStatus === 'completed' && updatedDonation.receipt_url) {
+        toast.success('Comprobante generado exitosamente')
+      }
+      
+      // Revalidate in background
+      mutateDonations()
+    } catch (error) {
+      console.error('Error updating donation status:', error)
+      toast.error('Error al actualizar el estado de la donación')
+    }
+  }
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -293,7 +337,7 @@ export default function AdminCampaignDetailPage() {
                   <DonationList 
                     donations={donations}
                     variant="admin"
-                    onViewDetail={setSelectedDonation}
+                    onViewDetail={handleViewDonationDetail}
                     showActions={true}
                   />
                 </CardContent>
@@ -489,8 +533,7 @@ export default function AdminCampaignDetailPage() {
         donation={selectedDonation}
         isOpen={!!selectedDonation}
         onClose={() => setSelectedDonation(null)}
-        onDownload={() => {/* lógica download */}}
-        onEditStatus={() => {/* lógica edit status */}}
+        onStatusChange={handleDonationStatusChange}
       />
 
       {/* Modal de Crear Donación */}
